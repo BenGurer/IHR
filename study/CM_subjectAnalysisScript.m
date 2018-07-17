@@ -1,6 +1,10 @@
 %% CM_subjectAnalysisScript
-% Scripted subject analysis for Comparisions at 7T and Cortical Magnification (CM) studies
+% Scripted subject analysis for Comparisons at 7T and Cortical Magnification (CM) studies
 % Study dates: 2015 - 2018
+
+% Info:
+% Uses mrTools functions for data analysis, processing and visulisation.
+% Calls subfunctions from IHR repository for data analysis, processing and visulisation.
 
 % Aims:
 % Measure cortical magnification
@@ -9,8 +13,8 @@
 
 %% Tasks:
 % load subject data
-% perform GLM analysis
-% perform pRF analysis
+% perform GLM analysis - General Linear Modelling
+% perform pRF analysis - Population Receptive Field modelling 
 % calculate gradient reversals
 % define ROIs
 % export data from volume to flatmap space
