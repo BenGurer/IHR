@@ -150,6 +150,8 @@ pRFInfo.pRFrestrictROI = 'ARexp';
 pRFInfo.pRFrois = {'Left_AR_exp','Right_AR_exp'}; % ROIs to restrict pRF analysis - expanded around AC
 pRFInfo.pRFOverlayNames = {'r2','PrefCentreFreq','rfHalfWidth'};
 pRFInfo.pRFgradientReversalOverlay = 2;
+pRFInfo.pRFrestrictROI = 'ARexp';
+pRFInfo.pRFanalysisName = ['pRF_', pRFInfo.pRFrestrictROI];
 
 
 
