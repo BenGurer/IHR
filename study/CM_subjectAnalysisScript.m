@@ -69,8 +69,7 @@ doCorticalMagnification = 0;
 doGRrois = 0;
 
 %% define subjects
-% iSubs2Run = [1,2,3,4,5,6,7,8];
-iSubs2Run = [6,7,8];
+iSubs2Run = [1,2,3,4,5,6,7,8];
 
 %% loop over subjects
 % use for loop to repeat analysis for each subject
