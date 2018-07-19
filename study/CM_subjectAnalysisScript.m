@@ -70,7 +70,7 @@ doGRrois = 0;
 
 %% define subjects
 % iSubs2Run = [1,2,3,4,5,6,7,8];
-iSubs2Run = [1,2,3,6,7,8];
+iSubs2Run = [6,7,8];
 
 %% loop over subjects
 % use for loop to repeat analysis for each subject
@@ -1015,7 +1015,7 @@ for iSub = 1:length(iSubs2Run)
                         
                         % restrict by ROI
                         for iROI = 1:length(roiNames)
-                            eval(['roi = data.' Info.Sides{iSide} '.' roiNames{iROI} '.roi;']);
+                            eval(['roi = data.' roiNames{iROI} '.roi;']);
                             eval(['data.', roiNames{iROI}, '.', glmInfo.groupNames{iGroup}, '.', pRFInfo.analysisNames_Groups{iGroup}{iAnal}, '.', pRFInfo.pRFOverlayNames{iOverlay}, '  = get_ROIdata(tempData.data,roi);']);
                             
                         end
@@ -1054,7 +1054,7 @@ for iSub = 1:length(iSubs2Run)
                         % restrict by ROI
                         for iROI = 1:length(roiNames)
                             clear tempROIdata
-                            eval(['roi = data.' Info.Sides{iSide} '.' roiNames{iROI} '.roi;']);
+                            eval(['roi = data.' roiNames{iROI} '.roi;']);
                             %  eval(['data.', Info.Sides{iSide}, '.', roiNames{iROI}, '.scanData.', pRFInfo.analysisNames_Groups{iGroup}{iAnal}, '.', pRFInfo.pRFOverlayNames{iOverlay}, '{iScan}  = get_ROIdata(tempData.data,roi);']);
                             eval(['tempROIdata = get_ROIdata(tempData.data,roi);']);
                             
