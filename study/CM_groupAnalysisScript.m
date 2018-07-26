@@ -1,40 +1,644 @@
 function CM_groupAnalysisScript
+%% CM_subjectAnalysisScript
+% Scripted group analysis for Comparisons at 7T and Cortical Magnification (CM) studies
+% Study dates: 2015 - 2018
 
-% get study info
+% Info:
+% gets data from subject analysis
+    % save structure
+        % data.roi.dataset.analysis.voxelParameter
+        % ie. data.Left.scan1.glm_boxcar_nCons8.R2
+% tidys data in tidyverse
+% saves as .csv
+
+% Aims:
+% Measure cortical magnification
+% Compare acquisition protocols
+% Compare analysis methods
+
+%% Tasks:
+%% ROI analysis
+%% Comparing analysis methods
+% GLM vs pRF
+
+%% Comparison 1: GLM methods
+% Index max (IM), Centroid (C), debiased Weighted Mean (dWM)
+% Data = Sparse concatenated
+
+%% Comparison 2: pRF vs GLM
+% GLM dWM , pRF pCF
+% Data = Sparse concatenated
+
+%% Comparison 3: pTW estimation
+% GLM Beta weights
+    % Split half tuning width
+    % Data = Scans	
+% pRF
+    % Split half tuning widths
+    % Data = Scans
+% Notes: Calculate subject level with matlab and plot group level with R
+
+%% Data vis and Stats
+% 	pCF distribution
+%   pCF Reliability for methods
+% 	Between run correlation:
+% 		GLM IM, GLM C, GLM dWN, pRF pCF
+% 	pCF Correlation between methods 
+%       prove they are valid - correlation matrix
+% 	pCF maps 
+%       Group level or representative subject
+
+%% Comparing acquisition protocols
+% Sparse vs Continuous
+
+%% Comparison 1: BOLD activity
+% GLM Beta weights
+% Split half tuning width
+% 	Data = Scans
+% ROI average beta weights
+% 	Data = concatenated 
+% Ratio between average beta weights
+% 	Data = concatenated 
+
+%% Comparison 2: pCF estimation
+% pRF
+% Data = concatenated 
+% pCF distribution
+% pCF Correlation between 
+    % Runs
+        % Which is better?
+    % Sparse and Continuous
+        % How similar are they
+
+% GLM dWeightMean
+% Data = concatenated 
+% pCF distribution
+% pCF Correlation between 
+    % Runs
+        % Which is better?
+    % Sparse and Continuous
+        % How similar are they?
+
+%% Comparison 3: pTW estimation
+% GLM Beta weights
+    % Split half tuning width
+    % Data = Scans	
+% pRF
+    % Split half tuning widths
+    % Data = Scans
+% Notes: Calculate subject level with matlab and plot group level with R
+ 
+%% Other Analysis
+% HRF estimation
+% 	Average deconvolution estimate
+% 	Average fitted params ( check if median is more appropriate than mean (in case of outliers))
+% 	Plot averaged fitted params or average of the curves
+% Notes: Calculate subject level with matlab and plot group level with R
+
+
+%% Print mrView figures
+
+%% save data for R analysis/plotting
+
+%% Begin
+
+%% close and clear everything
+clear all; close all; clc
+
+%% get study info
 [stimInfo, glmInfo, pRFInfo, Info, plotInfo] = CM_setupStudyParams;
 
-% use is pc to set data directory - could do in cm_setupStduyparams
-% Info.dataDir = '/Volumes/data_PSY/data';
-% Info.dataDir = 'E:\data';
-% E:\data\CorticalMagnification\11108_006
-Info.dataDir = 'E:\OneDrive - The University of Nottingham\data';
+% use ispc to set data directory
+if ispc
+    Info.dataDir = 'E:\OneDrive - The University of Nottingham\data';
+else
+    Info.dataDir = '/Volumes/data_PSY/OneDrive - The University of Nottingham/data';
+end
+
+% set variable to be ' to use with eval
 q = char(39);
 
-iSubs2Run = [1,2,3,5,6,7,8];
+%% set logicals to what we want to do
+doHRF = 0;
+doComparisions = 1;
 
-%% Load subject data
-% groupData = struct;
-% for iSub = 1:8
-for iSub = 5
+
+%% define subjects
+nSubjects = 8;
+% iSubs2Run = [1,2,3,4,5,6,7,8];
+
+iSubs2Run = [1,2,5,6,7,8];
+
+for iSub = 1:length(iSubs2Run)
+    
+    data = [];
     % Get subject info
     subjectInfo = get_SubjectInfo_CM(iSubs2Run(iSub));
     % Subject ID, flatmap names
     saveName = [subjectInfo.subjectID '_data.mat'];
     % move to subject folder
     cd(fullfile(Info.dataDir,Info.studyDir,subjectInfo.subjectID));
-    % load data
-    groupData(iSub) = load(saveName);
+    % Load subject data
+    load(saveName);
+
+    
+    %% HRF
+    if doHRF
+    % average hrf params for 3T analysis
+    
+    % TidyVerse
+    % Row: observation = subject
+    % Column: Variable = fitted hrf param
+    
+    hrfSaveNames = {'x_Gamma', 'x_doubleGamma', 'x_dGamma',};
+    hrfNames = {'Gamma', 'doubleGamma', 'diffofGamma'};
+    hrfFunctions = {@get_HRFGamma;
+        @get_HRFDoubleGamma;
+        @get_HRFDiffOfGamma;};
+    t = 0:15;
+    
+    % move out of subject loop to save all subjects
+    hrf_name = [];
+    hrf_params = [];
+    hrf_subject = [];
+    
+    for iHRF = 1:length(hrfSaveNames)
+        
+        temp_hrf_params = [];
+        temp_hrf_params = eval(['data.hrf.',hrfSaveNames{iHRF} ';']);
+        temp_hrf_name = repmat(hrfNames{iHRF},length(temp_hrf_params),1);
+        temp_hrf_subject = repmat(iSub,length(temp_hrf_params),1);
+        
+        hrf_name = [hrf_name; string(temp_hrf_name)];
+        hrf_params = [hrf_params; temp_hrf_params'];
+        hrf_subject = [hrf_subject; temp_hrf_subject];
+        
+    end
+    
+    % move out of subject loop to save all subjects
+    hrf_table = [];
+    hrf_table = table(hrf_name,hrf_params,...
+        hrf_subject,...
+        'VariableNames',{'hrf_name', 'hrf_params', 'hrf_subject'});
+    
+    % Matlab
+    % save hrf params in seperate variables, n by m, n = suject; m = parameters.
+    
+    for iHRF = 1:length(hrfSaveNames)
+        temp_hrf_params = eval(['data.hrf.',hrfSaveNames{iHRF} ';']);
+        eval(['hrf.',  hrfNames{iHRF},'_data(iSubs2Run(iSub),:) = temp_hrf_params;']);
+    end
+    end
+    
+    %% 7T comparisions %%
+    
+    %% save data in TidyVerse
+    % dataset 1: pCF estiamtes
+    % need one table with all pCF estiamtes
+    
+    %% Comparing analysis methods
+    %   GLM vs pRF
+    
+    %   Data = Sparse concatenated and split
+    
+    %% Data vis and Stats
+    % 	pCF distribution
+    %   pCF Reliability for methods
+    % 	Between run correlation:
+    % 		GLM IM, GLM C, GLM dWN, pRF pCF
+    % 	pCF Correlation between methods
+    %       prove they are valid - correlation matrix
+    % 	pCF maps
+    %       Group level or representative subject
+    %   Average split half tuning curves
+
+    % Comparison 1: GLM methods
+    %   Index max (IM), Centroid (C), debiased Weighted Mean (dWM)
+    
+    % Comparison 2: pRF vs GLM
+    %   GLM dWM , pRF pCF
+    
+    % Comparison 3: pTW estimation
+    %   GLM Beta weights  , pRF pTW    
+    %   Data = Scans / Split half tuning curves
+    %   Notes: need to calcuate split half tuning curves    
+
+   
+    %% Begin comparing: Voxel estimates
+    % outcomes:
+        % Distribution
+        % Correlation
+    
+    % Transform data into tidyVerse   
+    % Row: observation = voxel
+    % Column: Variable = everything else
+    % subject, pCF estimate value, pTW estimate value, roi, acquisiton, concatenation, analysis, hrf, estimation method
+    
+    subject = [];
+    roi = [];
+    %  pCF estimate value
+    frequency_nERB = []; % estimate values in number of ERB
+    frequency_kHz = []; % estimate values in kHz
+    % pTW estimate value
+    selectivity_nERB = []; % estimate values in number of ERB
+    selectivity_kHz = []; % estimate values in kHz
+    acquisiton = []; % acquisiton protocol
+    concatenation = []; % concatenated or individual scan
+    analysis = []; % GLM or pRF
+    method = []; % for GLM {'Centriod'  'Spread'  'julien_pCF'  'julien_pTW'  'indexMax'} or pRF for pRF
+    
+    % roi
+    roiNames = {'LeftGR_GLM', 'LeftGRa_GLM', 'LeftGRp_GLM', 'RightGR_GLM', 'RightGRa_GLM', 'RightGRp_GLM'};
+    
+    % acquisiton
+    acquisitonNames = {'Sparse', 'Continuous'};
+    
+    % concatenation
+    concatNames_data = {'ConcatenationSparse', 'scan_1', 'scan_3';...
+        'ConcatenationCont',  'scan_2', 'scan_4'};
+    concatNames_table = {'Sparse', 'Sparse_1', 'Sparse_2';...
+        'Continuous',  'Contin_3', 'Contin_4'};
+    
+    % analysis
+    pRFanalysisName = ['pRF_', pRFInfo.pRFrestrictROI];
+    analysisNames_data = {'glm_hrfDoubleGamma', 'glm_hrfBoxCar', pRFanalysisName};
+    analysisNames_table= {'GLM', 'GLM', 'pRF'};
+    hrfNames_table = {'Double Gamma', 'Box Car', 'Difference of Gamma'};
+    
+    % estimation method
+    estimateGLMFreqNames_data = {'Centriod', 'julien_pCF', 'indexMax'};
+    estimateGLMTuningName_data = {'Spread', 'julien_pTW', 'NA'};
+    estimateGLMFreqNames_table = {'Centriod', 'Debiased Centriod', 'Max'};
+    estimateGLMTuningName_table = {'Spread', 'Debiased Spread', 'NA'}; 
+    
+    for iROI = 1:length(roiNames)
+        roiName = roiNames{iROI};
+        for iAcq = 1:length(acquisitonNames)
+            acquisitonName = acquisitonNames{iAcq};
+            
+            for iConcat = 1:size(concatNames_data,2)
+                % get from group and scans
+                concatName_data = concatNames_data{iAcq,iConcat};
+                concatName_table = concatNames_table{iAcq,iConcat};
+                
+                for iAnal = 1:length(analysisNames)
+                    
+                analysisName = analysisNames_data{iAnal};
+                if ~strcmp(analysisNames_data,pRFanalysisName)                   
+                    estimateFreqNames_data = estimateGLMFreqNames_data;
+                    estimateTuningName_data = estimateGLMTuningName_data;
+                    estimateFreqNames_table = estimateGLMFreqNames_table;
+                    estimateTuningName_table = estimateGLMTuningName_table;
+                else                 
+                    estimateFreqNames_data = {'PrefCentreFreq'};
+                    estimateTuningName_data = {'rfHalfWidth'};
+                    estimateFreqNames_table = {'population Centre Frequency'};
+                    estimateTuningName_table = {'population Tuning Width'};
+                end 
+                    
+                    for iEst = 1:length(estimateFreqNames_data)
+                        
+                        % get pCF estimate values from data struct
+                        % repeat subject, roi, acquisiton, concatenation, analysis, estimation method - nVoxel times
+                        % save in table after subject for loop
+                        eval(['tempFrequency = data.' roiName '.' concatName_data '.' analysisName '.' estimateFreqNames_data{iEst}]);
+                        frequency_nERB = temp_frequency; % estimate values in number of ERB                       
+                        frequency_kHz = funInvNErb(temp_frequency); % estimate values in kHz
+                        % pTW estimate value
+                        
+                        eval(['tempSelectivity = data.' roiName '.' concatName_data '.' analysisName '.' estimateTuningName_data{iEst}]);
+                        selectivity_nERB = tempSelectivity; % estimate values in number of ERB
+                        selectivity_kHz = funInvNErb(tempSelectivity); % estimate values in kHz
+                        
+                        
+                    end
+                end
+            end
+        end
+    end
+                
+    %% fin comparing: Voxel estimates
+        
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %% Begin comparing: ROI average GLM beta weights
+    % this will require calucating ROI averages before exporting to tidyVerse
+        % split tuning Curves
+        % moving average
+    
+    % ROI average estimate
+    % outcomes:
+        % Split tuning Curves
+            % data: binned
+        % ROI Average Beta Weights
+            % data: moving average
+            
+    %% code goes here
+    
+    %% Split Tuning Curves
+    % data: split
+    
+    % Transform data into tidyVerse   
+    % Row = observation: beta weight at x frequency point
+    % Column = Variable:
+    % subject, beta weight value, frequency point, frequency group, roi, acquisiton
+    
+    %% ROI Average Beta Weights
+    % data: concatenated
+    
+   	% Transform data into tidyVerse   
+    % Row = observation: beta weight at x frequency point
+    % Column = Variable:
+    % subject, beta weight value, frequency point, roi, acquisiton
+    
+    %% code goes here
+    
+    %% fin comparing: ROI average estimate
+    
+    
+    % for iSub = 1:8
+    
+    % tasks:
+    % get nVoxel data values
+    % repeat the properties nVoxel times
+    % save all in a table
+    
+    subject = [];
+    roi = [];
+    %  pCF estimate value
+    frequency_nERB = []; % estimate values in number of ERB
+    frequency_kHz = []; % estimate values in kHz
+    % pTW estimate value
+    selectivity_nERB = []; % estimate values in number of ERB
+    selectivity_kHz = []; % estimate values in kHz
+    acquisiton = []; % acquisiton protocol
+    concatenation = []; % concatenated or individual scan
+    analysis = []; % GLM or pRF
+    method = []; % for GLM {'Centriod'  'Spread'  'julien_pCF'  'julien_pTW'  'indexMax'} or pRF for pRF
+
+    % Concatenated data
+    Frequency = [];
+    Frequency_kHz = [];
+    TuningWidth = [];
+    TuningWidth_kHz = [];
+    Analysis = [];
+    ROI = [];
+    r2 = [];
+    % voxelPropertyNames: {'Centriod'  'Spread'  'julien_pCF'  'julien_pTW'  'indexMax'}
+    % pRFOverlayNames: {'r2'  'PrefCentreFreq'  'rfHalfWidth'}
+    estimateFreqNames = {'Centriod', 'julien_pCF', 'indexMax'};
+    estimateTuningName = {'Spread', 'julien_pTW', 'NA'};
+    
+    analysisType = {'GLM', 'pRF'};
+    hrfType = {'boxcar', 'Gamma'};
+    
+    
+    pRFanalysisName = ['pRF_', pRFInfo.pRFrestrictROI];
+    analysisNames = {'glm_hrfDoubleGamma', 'glm_hrfBoxCar', pRFanalysisName};
+    nCons = [32, 8];
+    nScans = 4;
+    
+    for iSide = 1:length(Info.Sides)
+        for iGroup = 1:length(glmInfo.groupNames)
+            groupName = glmInfo.groupNames{iGroup};
+            for iAnal = 1:length(analysisType)
+                
+                analysisName = analysisNames{iAnal};
+                if analysisName ~= analysisNames{3}                    
+                    estimateFreqNames = {'Centriod', 'julien_pCF', 'indexMax'};
+                    estimateTuningName = {'Spread', 'julien_pTW', 'NA'};                    
+                else                    
+                    %%%%%%% FIND pRF save names %%%%%%%%%%%%%%%%
+%                     pRFInfo.pRFOverlayNames = {'r2','PrefCentreFreq','rfHalfWidth'};
+                    estimateFreqNames = {'pCF'};
+                    estimateTuningName = {'pTW'};                    
+                end                
+                
+                for iHRF = 1:length(hrfType)                    
+                    %                 roiSaveName = [Info.Sides{iSide}, 'GR_' analName{iAnal}];                    
+                    roiSaveName = [Info.Sides{iSide}, 'GR_GLM']; % compare using ROI data from derived GLM analysis
+                    roiName = [Info.Sides{iSide}, 'GR'];
+                    for iEst = 1:length(estimateFreqNames)
+                    eval(['tempFrequency = data.' roiSaveName '.' groupName '.' analysisName '.' estimateFreqNames{iEst}]);
+                    tempFrequency_kHz = funInvNErb(tempFrequency);
+                    
+                    if ~strcmp('NA',estimateTuningName{iEst})
+                        eval(['tempTuningWidth = data.' roiSaveName '.' groupName '.' analysisName '.' estimateTuningName{iEst}]);
+                    else
+                        tempTuningWidth = nan(length(tempFrequency),1);
+                    end
+                    tempTuningWidth_kHz = funInvNErb(tempTuningWidth);
+                    
+                    
+                    eval(['tempR2 = data.' roiSaveName '.' groupName '.' analysisName '.r2;']);
+                    
+                    
+                    % seperate loop for scan data
+                    if analysisName == analysisNames{1} || analysisNames{2}
+                        
+                        for iBeta = 1:nCons(1)
+                            eval(['beta' mat2str(nCons(1)) ' = data.' roiSaveName '.' groupName '.' analysisName '.betas{iBeta,:}']);
+                        end
+                        
+                    else
+                        
+                        for iBeta = 1:nCons(1)
+                            eval(['betas' mat2str(nCons(1)) ' = nans(length(tempFrequency),1)']);
+                        end
+                    end
+                    
+                    nVoxels = length(tempFrequency);
+                    
+                    tempEstimateFreqName = repmat(estimateFreqNames{iEst},nVoxels,1);
+                    tempEstimateTuningName = repmat(estimateTuningName{iEst},nVoxels,1);
+                    tempAnalysis = repmat(analysisSaveName{iAnal},nVoxels,1);
+                    tempROI = repmat(roiName,nVoxels,1);
+                    
+                    r2 = [r2; tempR2'];
+                    
+                    Frequency = [Frequency; tempFrequency'];
+                    TuningWidth = [TuningWidth; tempTuningWidth'];
+                    Frequency_kHz = [Frequency; tempFrequency_kHz'];
+                    TuningWidth_kHz = [TuningWidth; tempTuningWidth_kHz'];
+                    
+                    if isempty(Analysis)
+                        Analysis = tempAnalysis;
+                        ROI = tempROI;
+                        estimateFreqName = tempEstimateFreqName;
+                        estimateTuningName = tempEstimateTuningName;
+                    else
+                        Analysis = char(Analysis,tempAnalysis);
+                        ROI = char(ROI,tempROI);                        
+                        estimateFreqName = char(estimateFreqName,tempEstimateFreqName);
+                        estimateTuningName = char(estimateTuningName,tempEstimateTuningName);
+                    end
+                    
+                    end
+                end
+                
+            end
+        end
+    end
+    
+    
+    subject = repmat(iSub,length(Frequency),1);
+    
+    T = table(Frequency,Frequency_kHz,...
+        TuningWidth,TuningWidth_kHz,...
+        r2, Betas,...
+        Analysis,ROI,...
+        subject,...
+        'VariableNames',{'Frequency' 'Frequency_kHz' 'TuningWidth' 'TuningWidth_kHz' 'r2' 'Betas' 'Analysis' 'ROI','Subject'});
+    
+    writetable(T, [saveName, '_Comparisions.csv'])
+    
+    
+    % Scan data
+    
+    
+    
+
+
+    
+    % subject loop end
 end
 
-%% Tidy data
-% Transform data into tidyVerse
-% Row: observation = voxel
-% Column: Variable = everything else
-% side, group(acquisiton, run), analysis, estimation method, estimate
-% for iSub = 1:8
-for iSub = 5
-    clear data
-    data = groupData(iSub).data;
+%% save data to file
+
+% move to group data save location
+cd(fullfile(Info.dataDir,Info.studyDir,'groupAnalysis'));
+
+%% HRF
+if doHRF
+% check param distribution
+% take median - minise the effects of outliers
+for iHRF = 1:length(hrfNames)
+    
+    % get data
+    hrf2av = [];
+    eval(['hrf2av = hrf.',  hrfNames{iHRF},'_data;']);
+    
+     % check by plotting functions
+     % average using median
+    figure
+    for iParam = 1:size(hrf2av,2)
+        subplot(3,3,iParam)
+        hist(hrf2av(:,iParam))
+        hrf_av(iParam) = median(hrf2av(:,iParam));
+    end
+    
+    eval(['hrf.',  hrfNames{iHRF},'_av = hrf_av;']);
+    
+    % check average functions
+    subplot(3,3,9)
+    plot(t,hrfFunctions{iHRF}(hrf_av,t))
+    disp(hrf_av)
+end
+ 
+% save hrf
+ save('hrf.mat',hrf)
+end
+
+ 
+
+%% Fin. 
+ 
+ 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%
+%     TimePoints = [];
+%     hrfEstimate = [];
+%     hrfEstimateName = [];
+%     
+%     % get_HRFDoubleGamma(x_doubleGamma,t)
+%     % get_HRFGamma(x_Gamma,t)
+%     % get_HRFDiffOfGamma(x_dGamma,t)
+%     
+%         
+%     % Two data frames
+%     % one to average curves
+%     % one to average fits?
+%     % OR
+%     % fit to average curves
+%     % average and fit in matlab??
+%     % or export fitted curves as functions and then fit to them?
+%     
+%     hrfFunctions = {@get_HRFGamma;
+%         @get_HRFDoubleGamma;
+%         @get_HRFDiffOfGamma;
+%         @get_HRFBoxCar};
+%     
+%     for iHRF = 1:length(hrfNames)
+%         
+%         tempTimePoints = data.hrf.estimate.time;
+%         
+%         if ~strcmpi(hrfSaveNames{iHRF},hrfSaveNames{end})
+%             eval(['temphrfFit = data.hrf.' hrfSaveNames{iHRF} ';']);
+%             temphrfEstimate = hrfFunctions{iHRF}(temphrfFit,tempTimePoints);
+%         elseif hrfSaveNames{iHRF} == 'BoxCar'
+%             temphrfEstimate = hrfFunctions{iHRF}([2.5, 2.5],tempTimePoints);
+%             
+%         else
+%             eval(['temphrfEstimate = data.hrf.' hrfSaveNames{iHRF} ';']);
+%         end
+%         
+%         temphrfEstimateName = repmat(hrfNames{iHRF},nTimepoints,1);
+%         
+%         TimePoints = [TimePoints, tempTimePoints'];
+%         hrfEstimate = [hrfEstimate, temphrfEstimate'];
+%         
+%         if isempty(hrfEstimateName)
+%             hrfEstimateName = temphrfEstimateName;
+%         else
+%             hrfEstimateName = char(hrfEstimateName,temphrfEstimateName);
+%         end
+%         
+%     end
+%     subject = repmat(iSub,length(TimePoints),1);
+%     
+%     T_hrf = table(hrfEstimate,TimePoints,...
+%         hrfEstimateName,...
+%         subject,...
+%         'VariableNames',{'hrfEstimate', 'Gamma', 'doubleGamma', 'differenceOfGamma', 'Time(s)', 'Subject'});
+%     
+%     writetable(T, 'HRF_data.csv')
+%         
+%     % just HRF estimate
+%     nTimepoints = length(data.hrf.estimate.time);
+%     
+%     TimePoints = [];
+%     hrfEstimate = [];
+%     hrfEstimateName = [];
+%     tempTimePoints = data.hrf.estimate.time;
+%     temphrfEstimate = data.hrf.deconv;
+%     
+%     TimePoints = [TimePoints, tempTimePoints'];
+%     hrfEstimate = [hrfEstimate, temphrfEstimate'];
+%     
+%     
+%     subject = repmat(iSub,length(TimePoints),1);
+%     
+%     T = table(hrfEstimate,TimePoints,...
+%         subject,...
+%         'VariableNames',{'hrfBetaEstimate', 'Time_sec', 'Subject'});
+%     
+%     writetable(T, [saveName, '_HRF.csv'])
+%     
+%    % average estimate for science
+%        %     data.hrf.x_doubleGamma, data.hrf.x_Gamma, data.hrf.x_dGamma, data.hrf.estimate, data.hrf.deconv, data.hrf.deconvTW
+%        hrfNames = {'Gamma', 'Double Gamma', 'Diff of Gamma', 'BoxCar', 'Deconvolution'};
+%     hrfSaveNames = {'x_Gamma', 'x_doubleGamma', 'x_dGamma', 'deconv'};
+%     nTimepoints = length(data.hrf.estimate.time);
+    
+    %% HRF params
+    % need to:
+    % get data for subject
+    % tidy
+    % save to group data table in tidy format - this is then loaded by R or do group analysis
+    
+    % average params using median - plot histogram to check
+    
+    %% save average recentred Deconvoluction
     
     %% Cortical Magnification %%
     pRFanalysisName = ['pRF_', pRFInfo.pRFrestrictROI];
@@ -227,98 +831,11 @@ for iSub = 5
     
     
     
-    %% get HRF estimation
-    % Two data frames
-    % one to average curves
-    % one to average fits?
-    % OR
-    % fit to average curves
-    % average and fit in matlab??
-    % or export fitted curves as functions and then fit to them?
-    
-%     data.hrf.x_doubleGamma, data.hrf.x_Gamma, data.hrf.x_dGamma, data.hrf.estimate, data.hrf.deconv, data.hrf.deconvTW
-hrfNames = {'Gamma', 'Double Gamma', 'Diff of Gamma', 'BoxCar', 'Deconvolution'};
-hrfSaveNames = {'x_Gamma', 'x_doubleGamma', 'x_dGamma', 'deconv'};
-nTimepoints = length(data.hrf.estimate.time);
 
-TimePoints = [];
-hrfEstimate = [];
-hrfEstimateName = [];
-
-% get_HRFDoubleGamma(x_doubleGamma,t)
-% get_HRFGamma(x_Gamma,t)
-% get_HRFDiffOfGamma(x_dGamma,t)
-
-hrfFunctions = {@get_HRFGamma;
-    @get_HRFDoubleGamma;
-    @get_HRFDiffOfGamma;
-    @get_HRFBoxCar};
-
-for iHRF = 1:length(hrfNames)   
-    
-    tempTimePoints = data.hrf.estimate.time;
-    
-    if ~strcmpi(hrfSaveNames{iHRF},hrfSaveNames{end})
-        eval(['temphrfFit = data.hrf.' hrfSaveNames{iHRF} ';']);
-        temphrfEstimate = hrfFunctions{iHRF}(temphrfFit,tempTimePoints);
-    elseif hrfSaveNames{iHRF} == 'BoxCar'        
-        temphrfEstimate = hrfFunctions{iHRF}([2.5, 2.5],tempTimePoints);
-    
-    else
-        eval(['temphrfEstimate = data.hrf.' hrfSaveNames{iHRF} ';']);        
-    end
-    
-    temphrfEstimateName = repmat(hrfNames{iHRF},nTimepoints,1);
-    
-    TimePoints = [TimePoints, tempTimePoints'];
-    hrfEstimate = [hrfEstimate, temphrfEstimate'];
-    
-    if isempty(hrfEstimateName)
-        hrfEstimateName = temphrfEstimateName;
-    else
-        hrfEstimateName = char(hrfEstimateName,temphrfEstimateName);       
-    end
-       
-end
-    subject = repmat(iSub,length(TimePoints),1);
-    
-    T = table(hrfEstimate,TimePoints,...
-        hrfEstimateName,...
-        subject,...
-        'VariableNames',{'hrfEstimate', 'Gamma', 'doubleGamma', 'differenceOfGamma', 'Time(s)', 'Subject'});
-    
-    writetable(T, [saveName, '_HRF.csv'])
-
-% just HRF estimate
-nTimepoints = length(data.hrf.estimate.time);
-
-TimePoints = [];
-hrfEstimate = [];
-hrfEstimateName = [];
-tempTimePoints = data.hrf.estimate.time;
-temphrfEstimate = data.hrf.deconv;
-
-TimePoints = [TimePoints, tempTimePoints'];
-hrfEstimate = [hrfEstimate, temphrfEstimate'];
-
-
-subject = repmat(iSub,length(TimePoints),1);
-
-T = table(hrfEstimate,TimePoints,...
-    subject,...
-    'VariableNames',{'hrfBetaEstimate', 'Time_sec', 'Subject'});
-
-writetable(T, [saveName, '_HRF.csv'])
-
-%% HRF params
-
-% average params using median - plot histogram to check
-
-%% save average recentred Deconvoluction
 
 
     
-end
+% end
 
 %% get GLM data
 % group
