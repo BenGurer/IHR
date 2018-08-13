@@ -61,8 +61,6 @@ HRF_TW_est = permute(averageHDRTunindCurves, [2 1 3]);
 % normalise to allow analysis to scale and offset
 hrf_Deconv = HRF_TW_est(7,:)/max(HRF_TW_est(7,:));
 
-% timePoints = [0, t];
-% hrf_Deconv = [0, hrf_Deconv];
 
 % Now plot
 figure
@@ -91,16 +89,16 @@ p_doubleGamma = [6 8 1 1 0]; %guess
 lb_DoubleGamma = [0 0 1 0 0];
 ub_DoubleGamma = [15 15 15 1 10];
 opts = optimset('MaxFunEvals', 500, 'Display', 'off');
-[x_doubleGamma, resnorm, ~, exitflag, output] = lsqcurvefit(@def_HRFDoubleGamma, p_doubleGamma, timePoints, hrf_Deconv, lb_DoubleGamma, ub_DoubleGamma, opts);
+[x_doubleGamma, resnorm, ~, exitflag, output] = lsqcurvefit(@def_HRFDoubleGamma, p_doubleGamma, t, hrf_Deconv, lb_DoubleGamma, ub_DoubleGamma, opts);
 subplot(3,2,3)
 % disp(x_doubleGamma)
-fittedHRF = def_HRFDoubleGamma(x_doubleGamma,timePoints);
-plot(timePoints,fittedHRF)
+fittedHRF = def_HRFDoubleGamma(x_doubleGamma,t);
+plot(t,fittedHRF)
 hold on
-plot(timePoints,def_HRFDoubleGamma(p_doubleGamma,timePoints), '--r')
+plot(t,def_HRFDoubleGamma(p_doubleGamma,t), '--r')
 % deconvHRF = a(7,:)
 deconvHRF = hrf_Deconv;
-plot(timePoints,deconvHRF)
+plot(t,deconvHRF)
 title('Double Gamma')
 legend('fitted params','starting params','deconv')
 
@@ -112,20 +110,20 @@ legend('fitted params','starting params','deconv')
 % amplitude = x(4);
 % offset = x(5);
 p_Gamma = [1 0.6 4 1 0]; %guess - Plot?
-lb_Gamma = [0.1 0.1 2 0.1 0.1];
+lb_Gamma = [1 0.1 2 0.1 0.1];
 ub_Gamma = [16 inf 16 1 10];
 
 opts = optimset('MaxFunEvals', 500, 'Display', 'off');
-[x_Gamma, resnorm, ~, exitflag, output] = lsqcurvefit(@def_HRFGamma, p_Gamma, timePoints, hrf_Deconv, lb_Gamma, ub_Gamma, opts);
+[x_Gamma, resnorm, ~, exitflag, output] = lsqcurvefit(@def_HRFGamma, p_Gamma, t, hrf_Deconv, lb_Gamma, ub_Gamma, opts);
 subplot(3,2,4)
 % disp(x_Gamma)
-fittedHRF = def_HRFGamma(x_Gamma,timePoints);
-plot(timePoints,fittedHRF)
+fittedHRF = def_HRFGamma(x_Gamma,t);
+plot(t,fittedHRF)
 hold on
-plot(timePoints,def_HRFGamma(p_Gamma,timePoints), '--r')
+plot(t,def_HRFGamma(p_Gamma,t), '--r')
 % deconvHRF = a(7,:)
 deconvHRF = hrf_Deconv;
-plot(timePoints,deconvHRF)
+plot(t,deconvHRF)
 title('Gamma')
 legend('fitted params','starting params','deconv')
 
@@ -141,14 +139,14 @@ p_dGamma = [1 0.6 4 2 1.2 11 0.25]; %guess - Plot?
 lb_dGamma = [0 0 0 0 0 0 -1];
 ub_dGamma = [16 inf 16 16 inf 16 1];
 opts = optimset('MaxFunEvals', 500, 'Display', 'off');
-[x_dGamma, resnorm, ~, exitflag, output] = lsqcurvefit(@def_HRFDiffOfGamma, p_dGamma, timePoints, hrf_Deconv, lb_dGamma, ub_dGamma, opts);
+[x_dGamma, resnorm, ~, exitflag, output] = lsqcurvefit(@def_HRFDiffOfGamma, p_dGamma, t, hrf_Deconv, lb_dGamma, ub_dGamma, opts);
 subplot(3,2,5)
 % disp(x_dGamma)
-fittedHRF = def_HRFDiffOfGamma(x_dGamma,timePoints);
-plot(timePoints,fittedHRF)
+fittedHRF = def_HRFDiffOfGamma(x_dGamma,t);
+plot(t,fittedHRF)
 hold on
-plot(timePoints,def_HRFDiffOfGamma(p_dGamma,timePoints), '--r')
-plot(timePoints,hrf_Deconv)
+plot(t,def_HRFDiffOfGamma(p_dGamma,t), '--r')
+plot(t,hrf_Deconv)
 title('Difference of Gamma')
 legend('fitted params','starting params','deconv')
 
@@ -159,48 +157,48 @@ totalDurationS = delayS+durationS;
 totalDuration = round(totalDurationS/sampleDuration);  %total duration in samples
 delay = round(delayS/sampleDuration);  %duration of delay in samples
 duration = totalDuration - delay;
-totalT = length(timePoints);
+totalT = length(t);
 hrfboxcar = [zeros(1,delay),ones(1,duration),zeros(1,totalT-totalDuration)];
 subplot(3,2,6)
-plot(timePoints,hrfboxcar)
+plot(t,hrfboxcar)
 hold on
-plot(timePoints,hrf_Deconv)
+plot(t,hrf_Deconv)
 
 title('Boxcar')
 legend('Model','deconv')
 
 
-% %% Using Gramm to plot deconv HRF
-% % TR = 1.5;
-% % timePoints = 0 : TR : (TR * analysisParams.nHrfComponents - TR);
-% 
-% grammTimePoints = repmat(timePoints,size(HRF_TW_est,1),1);
-% grammFreqBin = repmat(freqBin',1,size(HRF_TW_est,2));
-% 
-% figure
-% g = gramm('x',grammTimePoints,'y',grammFreqBin,'z',HRF_TW_est);
-% g.geom_line();
-% % g.facet_grid([],grammFreqBin);
-% g.draw()
-% 
-% % figure
-% % clear g
-% % g = gramm('x',grammTimePoints,'y',HRF_TW_est)
-% % g.geom_line();
-% % % g.facet_wrap(grammFreqBin,[]);
-% % g.draw()
-% 
+%% Using Gramm to plot deconv HRF
+% TR = 1.5;
+% timePoints = 0 : TR : (TR * analysisParams.nHrfComponents - TR);
+
+grammTimePoints = repmat(timePoints,size(HRF_TW_est,1),1);
+grammFreqBin = repmat(freqBin',1,size(HRF_TW_est,2));
+
+figure
+g = gramm('x',grammTimePoints,'y',grammFreqBin,'z',HRF_TW_est);
+g.geom_line();
+% g.facet_grid([],grammFreqBin);
+g.draw()
+
 % figure
 % clear g
-% g = gramm('x',grammTimePoints,'y',HRF_TW_est,'color',freqBin');
+% g = gramm('x',grammTimePoints,'y',HRF_TW_est)
 % g.geom_line();
+% % g.facet_wrap(grammFreqBin,[]);
 % g.draw()
-% 
-% figure
-% clear g
-% g = gramm('x',grammTimePoints,'y',HRF_TW_est,'color',freqBin');
-% g.geom_line();
-% g.facet_grid(freqBin,[]);
-% g.draw()
+
+figure
+clear g
+g = gramm('x',grammTimePoints,'y',HRF_TW_est,'color',freqBin');
+g.geom_line();
+g.draw()
+
+figure
+clear g
+g = gramm('x',grammTimePoints,'y',HRF_TW_est,'color',freqBin');
+g.geom_line();
+g.facet_grid(freqBin,[]);
+g.draw()
 
 end

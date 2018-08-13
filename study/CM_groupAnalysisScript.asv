@@ -211,8 +211,6 @@ hrfparams_name = [];
 hrfparams_params = [];
 hrfparams_subject = [];
 
-hrfav_plot = [];
-
 %% Varibles to define
 % Voxel estimates
 % roi
@@ -259,12 +257,6 @@ beta_hrfNames_table = {'Double Gamma'}; % {'Double Gamma', 'Box Car'};
 % ROI Average Beta Weights
 % used Split tuning curve variables plus:
 betaAveragingNames_table_bw = {'None','Moving Average'}; %{'Binned'};
-
-
-%% HRF
-hrfSaveNames = {'x_Gamma', 'x_doubleGamma', 'x_dGamma',};
-hrfNames = {'Gamma', 'doubleGamma', 'diffofGamma'};
-
 
 %% Study stuff to plot
 % could just add to the end of data as a different acquistion?
@@ -321,7 +313,9 @@ for iSub = 1:length(iSubs2Run)
         % save params to plot histograms
         % save HRF from fitted params to show shape
         % outside loop - calculate averaged params hrf and save that for plotting
-
+        
+        hrfSaveNames = {'x_Gamma', 'x_doubleGamma', 'x_dGamma',};
+        hrfNames = {'Gamma', 'doubleGamma', 'diffofGamma'};
 
         
         for iHRF = 1:length(hrfSaveNames)
@@ -961,17 +955,12 @@ if doHRF
         subplot(3,3,9)
         plot(t,hrfFunctions{iHRF}(hrf_av,t))
         disp(hrf_av)
-        
-        temp_hrf_av_plot = [];
-        temp_hrf_av_plot = hrfFunctions{iHRF}(hrf_av,t);
-        
-        hrfav_plot = [hrfav_plot, temp_hrf_av_plot];
-        
-        % make param name list and save each param with its name
     end
     
     % save hrf
     save('hrf.mat','hrf')
+    
+    hrfDoubleGamma = hrfFunctions{1}(hrf_av,t);
     
 end
 

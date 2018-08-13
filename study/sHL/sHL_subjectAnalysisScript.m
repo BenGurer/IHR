@@ -33,13 +33,6 @@ clear all; close all; clc
 [stimInfo, glmInfo, pRFInfo, Info, plotInfo] = sHL_setupStudyParams;
 % stimulus info, condition names, nummber of subjects etc
 
-% use ispc to set data directory
-if ispc
-    Info.dataDir = 'E:\OneDrive - The University of Nottingham\data';
-else
-    Info.dataDir = '/Volumes/data_PSY/OneDrive - The University of Nottingham/data';
-end
-
 % set variable to be ' to use with eval
 q = char(39);
 
@@ -56,7 +49,7 @@ doConvertvol2FlatAvDepth_GLM = 0;
 doGradientReversal_GLM = 0;
 doROIsGLM = 0;
 doGetDATA_GLM = 0;
-doROIRestrict_GLM = 0;
+doROIRestrict_GLM = 1;
 dopRF = 0;
 doConvertvol2FlatAvDepth_pRF = 1;
 doGradientReversal_pRF = 1;
@@ -65,6 +58,7 @@ doGetAndRestrictDATA_pRF = 1;
 doGRrois = 0;
 
 %% define subjects
+% iSubs2Run = [1,2,3,4,5,6,7];
 iSubs2Run = [1,2,3,4,5,6,7];
 
 %% loop over subjects
@@ -126,8 +120,19 @@ for iSub = 1:length(iSubs2Run)
         % surfaces
         
     end
+       
+    %% GLM Analysis with Double Gamma HRF
+    % Estiamting tonotopic properties
+    if doGLMdg
+        disp('Performing GLM analysis (HRF=double gamma)')
+        % Perform GLM analysis with double gamma model of HRF
+        % hrf = Box Car
+        % All runs
+        % [thisView] = script_glmAnalysis(thisView,glmInfo,groupNames,hrfModel,runSplitHalf,runTonotopic)
+        thisView = script_glmAnalysis(thisView,glmInfo,glmInfo.groupNames,{'hrfDoubleGamma'},1,1);
+    end
     
-       %% Make flatmaps
+    %% Make flatmaps
     if doMakeFlatmaps
         disp('Make flatmaps for each hemisphere...')
         disp('centre on HG (use R2 and f-test to guide)')
@@ -141,18 +146,6 @@ for iSub = 1:length(iSubs2Run)
         % use default names
         % resolution = 3; method = mrFlatMesh
         % rotate flatmaps for easy viewing (do before exporting to flatmap space)
-    end
-    
-    %% GLM Analysis with Double Gamma HRF
-    % Estiamting tonotopic properties
-    if doGLMdg
-        disp('Performing GLM analysis (HRF=double gamma)')
-        % Perform GLM analysis with double gamma model of HRF
-        % hrf = Box Car
-        % All runs
-        % [thisView] = script_glmAnalysis(thisView,glmInfo,groupNames,hrfModel,runSplitHalf,runTonotopic)
-        glmInfo.hrfParamsDoubleGamma = data.hrf.x_doubleGamma;
-        thisView = script_glmAnalysis(thisView,glmInfo,glmInfo.groupNames,{'hrfDoubleGamma'},1,1);
     end
     
     %% Auditory Responsive ROI CREATION
@@ -292,7 +285,13 @@ for iSub = 1:length(iSubs2Run)
                 % convert overlays to nERB
                 for i = 1:length(overlayNum)
                     overlayIN = viewGet(thisView,'overlay',overlayNum(i));
-                    [ thisView , ~ ] = convertOverlay_GLMCF2NERB(thisView,overlayIN,stimOne,stimTwo,[glmInfo.voxelPropertyNames{i} '_nERB']);
+                    if i == 3 || i == 4
+                        % is the overlay 'julien_pCF' or 'julien_pTW'
+                        debaised = 1;
+                    else
+                        debaised = 0;
+                    end
+                    [ thisView , ~ ] = convertOverlay_GLMCF2NERB(thisView,overlayIN,stimOne,stimTwo,[glmInfo.voxelPropertyNames{i} '_nERB'],debaised);
                 end
                 
             end
@@ -347,7 +346,13 @@ for iSub = 1:length(iSubs2Run)
                 % convert overlays to nERB
                 for i = 1:length(overlayNum)
                     overlayIN = viewGet(thisView,'overlay',overlayNum(i));
-                    [ thisView , ~ ] = convertOverlay_GLMCF2NERB(thisView,overlayIN,stimOne,stimTwo,[glmInfo.voxelPropertyNames{i} '_nERB']);
+                    if i == 3 || i == 4
+                        % is the overlay 'julien_pCF' or 'julien_pTW'
+                        debaised = 1;
+                    else
+                        debaised = 0;
+                    end
+                    [ thisView , ~ ] = convertOverlay_GLMCF2NERB(thisView,overlayIN,stimOne,stimTwo,[glmInfo.voxelPropertyNames{i} '_nERB'],debaised);
                 end
             end
         end
@@ -1046,3 +1051,6 @@ for iSub = 1:length(iSubs2Run)
         
     end
     
+    %% Quit current mrLoadRet view
+    mrQuit()
+end

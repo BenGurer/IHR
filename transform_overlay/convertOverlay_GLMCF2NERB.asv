@@ -6,9 +6,9 @@ function [ thisView , ERBdata ] = convertOverlay_GLMCF2NERB(thisView,overlayIN,s
 % minus the difference stimuli in NERB to account for be-biasing step -
 % this step calucated from 0 to (number of overlays .*1.25)
 if debiased
-ERBdata = overlayIN.data{1} .* (stimTwo-stimOne) + (stimOne - 1);
+ERBdata = (overlayIN.data{1} + stimOne) - ((stimTwo-stimOne).* 3);
 else
-ERBdata = overlayIN.data{1} .* (stimTwo-stimOne) + (stimOne - 1);
+ERBdata = overlayIN.data{1} + stimOne - 1;
 end
 
 scanDims = size(overlayIN.data{1});

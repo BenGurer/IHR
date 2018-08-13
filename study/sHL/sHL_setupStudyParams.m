@@ -20,6 +20,21 @@ lowFreqkHz = 0.1;
 highFreqkHz = 8;
 nStim = 32;
 
+%% Get stimulus properties
+% get stimulus frequencies
+stimInfo.lowFreqkHz = 0.1;
+stimInfo.highFreqkHz = 8;
+stimInfo.nStim = 32;
+
+[stimInfo.stimFreqs, stimInfo.stimFreqs_bin, stimInfo.stimFreqs_mv, stimInfo.stimNERBs, stimInfo.stimNERBs_bin, stimInfo.stimNERBs_mv] = convertStimIDtoFrequency(stimInfo.lowFreqkHz,stimInfo.highFreqkHz,stimInfo.nStim);
+
+stimInfo.sizes = [8 29 32];
+
+% below is too allow older code to still work
+stimInfo.stimNames.all = stimInfo.stimFreqs;
+stimInfo.stimNames.bin = stimInfo.stimFreqs_bin;
+stimInfo.stimNames.mvstim = stimInfo.stimFreqs_mv;
+
 [stimInfo.stimNames.all, stimInfo.stimNames.bin, stimInfo.stimNames.mv] = convertStimIDtoFrequency(lowFreqkHz,highFreqkHz,nStim);
 
 %% get stimulus senssation level
@@ -68,38 +83,33 @@ for iHRF = 1:length(glmInfo.hrfModel)
     glmInfo.analysisNames{iHRF} = ['glm_' glmInfo.hrfModel{iHRF}];
 end
 
-
-if Info.smooth
-    for iGroup = 1:length(glmInfo.groupNames)
-    glmInfo.groupNames{iGroup} = [glmInfo.groupNames{iGroup}, '_' ,Info.smoothingName];
-    end
-    
-glmInfo.scanGroupName = Info.smoothingName;
-else
-glmInfo.scanGroupName = 'MotionComp';   
-end
-% glmInfo.hrfModel = {'hrfDoubleGamma'};
-% glmInfo.groupNames = {'ConcatenationNH_unwarped', 'ConcatenationNH'};
+glmInfo.voxelPropertyNames = {'Centriod','Spread','julien_pCF','julien_pTW','indexMax'};
 glmInfo.nScans = 4;
-% glmInfo.nScans = 4;
 glmInfo.nStim = [32, 8];
-glmInfo.analysisNames_Scans = cell(1,(glmInfo.nScans.*length(glmInfo.nStim)).*length(glmInfo.hrfModel));
+% glmInfo.analysisNames_Scans = cell(1,(glmInfo.nScans.*length(glmInfo.nStim)).*length(glmInfo.hrfModel));
 c = 0;
 d = 0;
 f = 0;
 for iScan = 1:glmInfo.nScans
     for iStim = 1:length(glmInfo.nStim)
         for iHRF = 1:length(glmInfo.hrfModel)
-             c = c + 1;
-            glmInfo.analysisNames_Scans{c+d+f} = ['glm_' glmInfo.hrfModel{iHRF} '_nCons_' mat2str(glmInfo.nStim(iStim)) '_Scan_' mat2str(iScan)];
-            glmInfo.analysisBaseNames_Scans{c+d+f} = ['glm_' glmInfo.hrfModel{iHRF} '_nCons_' mat2str(glmInfo.nStim(iStim))];
-            glmInfo.analysisScanNum {c+d+f} = iScan;
+            %         iHRF = 1; % only perform boxcar analysis on individual scans
+           c = c + 1;
+%             glmInfo.analysisNames_Scans{c+d+f} = ['glm_' glmInfo.hrfModel{iHRF} '_nCons_' mat2str(glmInfo.nStim(iStim)) '_Scan_' mat2str(iScan)];
+%             glmInfo.analysisBaseNames_Scans{c+d+f} = ['glm_' glmInfo.hrfModel{iHRF} '_nCons_' mat2str(glmInfo.nStim(iStim))];
+%             glmInfo.analysisScanNum {c+d+f} = iScan;
+            glmInfo.analysisNames_Scans{c + d} = ['glm_' glmInfo.hrfModel{iHRF} '_nCons_' mat2str(glmInfo.nStim(iStim)) '_Scan_' mat2str(iScan)];
+            glmInfo.analysisBaseNames_Scans{c + d}= ['glm_' glmInfo.hrfModel{iHRF} '_nCons_' mat2str(glmInfo.nStim(iStim))];
+            glmInfo.analysisScanNum{c + d} = iScan;
+            glmInfo.analysisNStim{c + d} = glmInfo.nStim(iStim);
         end
-        c = 0;
-    d = d + length(glmInfo.hrfModel);
+%         c = 0;
+%         d = d + length(glmInfo.hrfModel); % remove when only using boxcar
+%                 d = d + 1;
     end
-    d = 0;
-f = f + length(glmInfo.nStim);
+    c = 0;
+%     f = f + length(glmInfo.nStim);
+d = d + length(glmInfo.hrfModel) + length(glmInfo.nStim);
 end
 
 glmInfo.analysisNames_Groups = cell(1,length(glmInfo.groupNames));
@@ -112,6 +122,19 @@ for iGroup = 1:length(glmInfo.groupNames)
     end
     c = 0;
     d = d + length(glmInfo.hrfModel);
+end
+
+c = 0;
+for iStim = 1:length(glmInfo.nStim)
+    for iHRF = 1:length(glmInfo.hrfModel)
+        c = c + 1;
+        glmInfo.analysisNames_nCons{c}= ['glm_' glmInfo.hrfModel{iHRF} '_nCons_' mat2str(glmInfo.nStim(iStim))];
+    end
+end
+
+glmInfo.analysisNames = cell(1,length(glmInfo.hrfModel));
+for iHRF = 1:length(glmInfo.hrfModel)
+    glmInfo.analysisNames{iHRF} = ['glm_' glmInfo.hrfModel{iHRF}];
 end
 
 %% pRF information
@@ -143,10 +166,11 @@ pRFInfo.pRFOverlayNames = {'r2','PrefCentreFreq','rfHalfWidth'};
 %% Info - save general info needed to struct
 
 if ispc
-    Info.dataDir = 'N:/data';
-elseif isunix
-    Info.dataDir = '/home/beng/data';
+    Info.dataDir = 'E:\OneDrive - The University of Nottingham\data';
+else
+    Info.dataDir = '/Volumes/data_PSY/OneDrive - The University of Nottingham/data';
 end
+
 Info.studyDir = 'hearingLossSimulation';
 %% Order of condition runs {[ConA Run1,ConA Run2],[ConB Run1,ConB Run2]}
 
@@ -180,6 +204,16 @@ Info.gradReversalInfo.overlayBase = 41; % 39
 Info.smooth = 1;
 Info.smoothingFWHM = 2;
 Info.smoothingName = ['Smoothed_fwhm' num2str(Info.smoothingFWHM)];
+
+if Info.smooth
+    for iGroup = 1:length(glmInfo.groupNames)
+    glmInfo.groupNames{iGroup} = [glmInfo.groupNames{iGroup}, '_' ,Info.smoothingName];
+    end
+    
+glmInfo.scanGroupName = Info.smoothingName;
+else
+glmInfo.scanGroupName = 'MotionComp';   
+end
 
 %% Define what to plot
 % cell array of analysis to plot
