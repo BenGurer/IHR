@@ -65,12 +65,13 @@ doConvertvol2FlatAvDepth_pRF = 0;
 doGradientReversal_pRF = 0;
 doROIspRF = 0;
 doGetAndRestrictDATA_pRF = 0;
+doGRrois = 0;
 doCorticalMagnification = 0;
-doGRrois = 1;
+doPrintFigures = 1;
 
 %% define subjects
-iSubs2Run = [1,2,3,4,5,6,7,8];
-% iSubs2Run = [4];
+% iSubs2Run = [1,2,3,4,5,6,7,8];
+iSubs2Run = [1,3,4,5,6,7,8];
 
 %% loop over subjects
 % use for loop to repeat analysis for each subject
@@ -724,7 +725,7 @@ for iSub = 1:length(iSubs2Run)
             for iROI = 1:length(ROInames)
                 
                 % get ROI struct (overwrite old roi definitions)
-                eval(['data.' ROInames{iROI} ' = struct;']);
+%                 eval(['data.' ROInames{iROI} ' = struct;']);
                 eval(['data.' ROInames{iROI} '.roi = viewGet(thisView,' q 'roi' q ',ROInames{iROI});']);
                 
                 % Restrict Group data
@@ -1160,7 +1161,7 @@ for iSub = 1:length(iSubs2Run)
     AP = {'a','p'};
     %         analName = {'GLM', 'pRF'};
     roiAnalName = {'GLM'};
-    
+    roiAnalNum = 1; % a bit of a hack to account for no pRF rois
     if doGRrois
         for iSide = 1:length(Info.Sides)
             
@@ -1187,7 +1188,9 @@ for iSub = 1:length(iSubs2Run)
             thisView = viewSet(thisView,'curOverlay',overlayNum);
             
             disp('create line ROIs for each reversal with the names:')
-            disp('LeftHighRevA_pRF, LeftLowRev_pRF, LeftHighRevP_pRF, RightHighRevA_pRF, RightLowRev_pRF, RightHighRevP_pRF')
+            disp([Info.Sides{iSide}, 'Higha_GLM'])
+            disp([Info.Sides{iSide}, 'Low_GLM'])
+            disp([Info.Sides{iSide}, 'Highp_GLM'])
             disp('hit F5 when done')
             
             keyboard
@@ -1258,6 +1261,7 @@ for iSub = 1:length(iSubs2Run)
                 end
             end
         end
+        mrSaveView(thisView);
     end
     
     % set view to FNIRTed flatmaps
@@ -1357,13 +1361,13 @@ for iSub = 1:length(iSubs2Run)
                     for iAP = 1:length(AP)
                         % make ROI names and get numbers then put in a list
                         clear roiList
-                        HighROIname = [Info.Sides{iSide}, 'High' AP{iAP} '_' roiAnalName{iAnal} '_ex_Vol'];
+                        HighROIname = [Info.Sides{iSide}, 'High' AP{iAP} '_' roiAnalName{roiAnalNum} '_ex_Vol'];
                         roiList(1) = viewGet(thisView,'roinum',HighROIname);
                         
-                        LowROIname = [Info.Sides{iSide}, 'Low', '_' roiAnalName{iAnal} '_ex_Vol'];
+                        LowROIname = [Info.Sides{iSide}, 'Low', '_' roiAnalName{roiAnalNum} '_ex_Vol'];
                         roiList(2) = viewGet(thisView,'roinum',LowROIname);
                         
-                        GRROIname = [Info.Sides{iSide}, 'GR' AP{iAP} '_' roiAnalName{iAnal} '_ex_Vol'];
+                        GRROIname = [Info.Sides{iSide}, 'GR' AP{iAP} '_' roiAnalName{roiAnalNum} '_ex_Vol'];
                         roiList(3) = viewGet(thisView,'roinum',GRROIname);
                         
                         % calculate Tonotopic Magnification
@@ -1371,7 +1375,7 @@ for iSub = 1:length(iSubs2Run)
                         [relativeDistances, overlayRoiData, pathDistances, verticesScanCoords] = cal_tonotopicMagnification(thisView,roiList,flatmapnames,[]);
                         
                         % save to structure
-                        roiSaveName = [Info.Sides{iSide}, 'GR' AP{iAP} '_' roiAnalName{iAnal}];
+                        roiSaveName = [Info.Sides{iSide}, 'GR' AP{iAP} '_' roiAnalName{roiAnalNum}];
                         eval(['data.' roiSaveName '.' groupName '.' analysisName '.tonotopicMagnificaion.relativeDistances = relativeDistances;']);
                         eval(['data.' roiSaveName '.' groupName '.' analysisName '.tonotopicMagnificaion.pCFcheck = overlayRoiData;']);
                         eval(['data.' roiSaveName '.' groupName '.' analysisName '.tonotopicMagnificaion.pathDistances = pathDistances;']);
@@ -1408,7 +1412,156 @@ for iSub = 1:length(iSubs2Run)
         
     end
     
+    %% print figures
+    if doPrintFigures
+        
+        filetype = '.png';
+        thisView = viewSet(thisView,'showrois','hide');        
+        thisView = viewSet(thisView,'basecorticaldepth', [0.3, 0.7]);
+        thisView = viewSet(thisView,'alpha',1);
+        
+        glmoverlayNames = {'r2', [glmInfo.voxelPropertyNames{1} '_nERB'], [glmInfo.voxelPropertyNames{2} '_nERB'],...
+            [glmInfo.voxelPropertyNames{3} '_nERB'], [glmInfo.voxelPropertyNames{4} '_nERB'], [glmInfo.voxelPropertyNames{5} '_nERB']};
+        pRFoverlayNames = pRFInfo.pRFOverlayNames;
+        % names used in saved data structure
+        estimateNames_pRF = {'r2', 'pCF', 'pTW'};
+        estimateNames_GLM = {'r2', 'pCFc', 'pTWs', 'pCFj', 'pTWj', 'pCFi'};
+        
+        pRFrestrictROI = 'ARexp';
+        pRFanalysisName = ['pRF_', pRFrestrictROI];
+        analysisNames = {'glm_hrfDoubleGamma',pRFanalysisName};
+        analysisSave_Names = {'GLM','pRF'};
+        
+        roiNames = {'GR' 'GRa' 'GRp'};
+        AP = {'a','p'};
+        %         analName = {'GLM', 'pRF'};
+        roiAnalName = {'GLM'};
+        
+        groupSaveNames = {'sparse','cont'};
+        
+        for iSide = 1:length(Info.Sides)
+            if viewGet(thisView,'currentbase') ~= viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide}])
+                baseNum = viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide}]);
+                thisView = viewSet(thisView,'currentbase',baseNum);
+            end
+            
+            for iGroup = 1:length(glmInfo.groupNames)
+                if viewGet(thisView,'curgroup') ~= viewGet(thisView,'groupNum',glmInfo.groupNames{iGroup})
+                    thisView = viewSet(thisView,'curgroup',glmInfo.groupNames{iGroup});
+                end
+                
+                for iAnal = 1:length(analysisNames)
+                    analysisName = analysisNames{iAnal};
+                    
+                    if viewGet(thisView,'curAnalysis') ~= viewGet(thisView,'analysisNum',analysisName)
+                        thisView = viewSet(thisView,'curAnalysis',viewGet(thisView,'analysisNum',analysisName));
+                    end                    
+                    
+                    switch analysisName
+                        case 'glm_hrfDoubleGamma'
+                            overlayNames = glmoverlayNames;
+                            estimateNames = estimateNames_GLM;
+                        case pRFanalysisName
+                            overlayNames = pRFoverlayNames;
+                            estimateNames = estimateNames_pRF;
+                    end
+                    
+                    for iOverlay = 1:length(overlayNames)
+                        
+                        overlayNum = viewGet(thisView,'overlayNum',overlayNames{iOverlay});
+                        thisView = viewSet(thisView,'curOverlay',overlayNum);                      
+                                                  
+                        % get view
+                        thisView = getMLRView;
+                        
+                        % change overlay colour map
+                        thisView = viewSet(thisView,'overlaycmap','convertOverlay_brewerColour'); % trying using brewer map here
+                        
+                        % refresh mrLoadRet view
+                        refreshMLRDisplay(thisView.viewNum);
+                        
+                        coords = []; % only want to do once per hemi
+                        radius = 750;
+                        saveName = ['Subject_' iSub '_' groupSaveNames{iGroup} '_' analysisSave_Names{iAnal} '_' estimateNames{iOverlay} '_' Info.sides{iSide}];                                       
+                        spotlighted = 1;
+                        
+                        [thisView,coords,radius] = print_paramsmap_spotlight(thisView,coords,radius,saveName,spotlighted);
+                        
+                    end
+                end
+            end
+        end
+        
+        thisView = viewSet(thisView,'alpha',0);
+        thisView = viewSet(thisView,'currentroi',viewGet(thisView,'roiNum','AR'));
+        
+        for iSide = 1:length(Info.Sides)
+            if viewGet(thisView,'currentbase') ~= viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide}])
+                baseNum = viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide}]);
+                thisView = viewSet(thisView,'currentbase',baseNum);
+            end
+            refreshMLRDisplay(thisView);
+            
+            % anatomy
+            thisView = viewSet(thisView,'showrois','hide');
+            saveName = ['anat_', Info.sides{iSide}];
+            mrPrint(thisView,'useDefault=1','roiSmooth=0','roiLabels=0')
+            fh = findobj( 'Type', 'Figure', 'Name', 'Print figure' );
+            saveas(fh,saveName,'svg')
+            close(fh)
+            
+            % AR roi
+            thisView = viewSet(thisView,'showrois','selected perimeter');
+            saveName = ['roi_AR_', Info.sides{iSide}];
+            mrPrint(thisView,'useDefault=1','roiSmooth=0','roiLabels=0')
+            fh = findobj( 'Type', 'Figure', 'Name', 'Print figure' );
+            saveas(fh,saveName,filetype)
+            close(fh)
+            
+        end
+        
+        % GR rois      
+        thisView = viewSet(thisView,'showrois','selected perimeter');
+        for iSide = 1:length(Info.Sides)
+            if viewGet(thisView,'currentbase') ~= viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide},'Volume'])
+                baseNum = viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide},'Volume']);
+                thisView = viewSet(thisView,'currentbase',baseNum);
+            end
+            
+            for iROI = 1:length(roiNames)
+                
+                saveName = ['roi_', roiNames{iROI}, Info.sides{iSide}];
+                
+                thisView = viewSet(thisView,'currentroi',viewGet(thisView,'roiNum',[Info.Sides{iSide},roiNames{iROI}, '_GLM']));
+                refreshMLRDisplay(thisView);
+                
+                mrPrint(thisView,'useDefault=1','roiSmooth=0','roiLabels=0')               
+                % set size to A4
+                fh = findobj( 'Type', 'Figure', 'Name', 'Print figure' );
+                
+                myaa('publish');  % Render an anti-aliased version
+                
+
+                
+                refreshMLRDisplay(thisView.viewNum); % update view
+
+%                 publish test.m;)
+                saveas(fh,saveName,filetype)
+                close(fh)
+            end
+            
+            % gradient reversal overlays 
+            % figure out how to alpha  pCF maps by gradient reversals
+            'Ouput 4 - gradientReversal_left_glm_hrfDoubleGamma(julien_pCF_nERB,[18 18 21])'
+            
+            thisView = viewSet(thisView,'alphaoverlay','Ouput 6 - gradientReversal_left_glm_hrfDoubleGamma(julien_pCF_nERB,[18 18 21])');
+            thisView = viewSet(thisView,'alphaoverlayexponent',0.01);
+        end
+        
+        thisView = viewSet(thisView,'alpha',1);
+    end
+    
     %% Quit current mrLoadRet view
-    mrQuit()
+    mrQuit(0)
     
 end

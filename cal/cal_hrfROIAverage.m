@@ -49,8 +49,11 @@ for i=uniqueBestFrequencies
 end
 % tuningCurves = reshape(tuningCurves,[overlaySize nTuningCurvesIndices]);
 % unsmoothedTuningCurves = tuningCurves;
-averageTunindCurves = nansum(tuningCurves,3);
+% averageTunindCurves = nansum(tuningCurves,3);
 averageHDRTunindCurves = nansum(HDRS,3);
+
+% averageTunindCurves = nansum(tuningCurves,3);
+% averageHDRTunindCurves = nanmean(HDRS,3);
 
 %% Plotting fitting of HRF or HRF deconvolution estimate
 % get data ready/ in the right format
@@ -59,7 +62,8 @@ freqBin = 1-nOverlays : 1/resolution : nOverlays-1;
 % permute "average hrf tunding curve" matrix dimentions (from frequency,time to time, frequency)
 HRF_TW_est = permute(averageHDRTunindCurves, [2 1 3]);
 % normalise to allow analysis to scale and offset
-hrf_Deconv = HRF_TW_est(7,:)/max(HRF_TW_est(7,:));
+middle = floor(size(HRF_TW_est,1)./2);
+hrf_Deconv = HRF_TW_est(middle,:)/max(HRF_TW_est(middle,:));
 
 % timePoints = [0, t];
 % hrf_Deconv = [0, hrf_Deconv];

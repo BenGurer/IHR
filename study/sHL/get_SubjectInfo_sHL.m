@@ -18,9 +18,7 @@ wholeheadMPRAGE{1} = '13';
 freeSurferName{1} = '02344_034';
 T2star{1} = '12';
 refScan{1} = '11'; % scan before t2 structural
-% flatmapName{1} = {'80_131_81_Rad60', '181_127_85_Rad60'};
-
-flatmapName{1} = {'x02344_034_left_WM_Flat_80_131_81_Rad60', 'x02344_034_right_WM_Flat_181_127_85_Rad60'};
+flatmapName{1} = {'x02344_034_left_WM_Flat_78_132_80_Rad55', 'x02344_034_right_WM_Flat_181_128_84_Rad55'};
 apScan{1} = 5;
 paScan{1} = 6;
 conditionOrder{1} = {[2,4],[1,3]};
@@ -37,7 +35,7 @@ apScan{2} = 5;
 paScan{2} = 6;
 epiScans{2} = [03, 04, 08, 09];
 conditionOrder{2} = {[2,4],[1,3]};
-flatmapName{2} = {'x12013_002_left_WM_Flat_84_99_86_Rad75','x12013_002_right_WM_Flat_175_101_79_Rad75'};
+flatmapName{2} = {'x12013_002_left_WM_Flat_78_115_87_Rad55','x12013_002_right_WM_Flat_182_106_79_Rad55'};
 
 subject{3} = '12023_002';
 niftiBaseName{3} = 'HL_12023_002_';
@@ -47,7 +45,7 @@ T2star{3} = '7';
 refScan{3} = '04'; % scan before t2 structural
 distCorrectionRef{3} = {'5','6'};
 conditionOrder{3} = {[2,4],[1,3]};
-flatmapName{3} = {'x12023_002_left_WM_Flat', 'x12023_002_right_WM_Flat'};
+flatmapName{3} = {'x12023_002_left_WM_Flat_77_123_79_Rad55', 'x12023_002_right_WM_Flat_189_112_83_Rad55'};
 
 subject{4} = '11108_007';
 niftiBaseName{4} = 'HL_11108_007_';
@@ -67,7 +65,7 @@ fMRIScans{5} = {'4', '5', '10', '11'};
 refScan{5} = '5'; % scan before t2 structural
 nScans(5) = 4;
 conditionOrder{5} = {[1,3],[2,4]};
-flatmapName{5} = {'x13016_001_left_WM_Flat_72_101_82_Rad55', 'x13016_001_right_WM_Flat_172_112_96_Rad55'};
+flatmapName{5} = {'x13016_001_left_WM_Flat_72_101_82_Rad55', 'x13016_001_right_WM_Flat_174_114_97_Rad55'};
 
 subject{6} = '11024_017';
 niftiBaseName{6} = '11024_017_';
@@ -78,8 +76,7 @@ fMRIScans{6} = {'4', '5', '10', '11'};
 refScan{6} = '5'; % scan before t2 structural
 nScans(6) = 4;
 conditionOrder{6} = {[1,3],[2,4]};
-% flatmapName{6} = {'x11024_017_left_WM_Flat_72_106_82_Rad55', 'x11024_017_right_WM_Flat_169_100_82_Rad55'};
-flatmapName{6} = {'x11024_017_left_WM_Flat_62_117_79_Rad55' , 'x11024_017_right_WM_Flat_184_119_82_Rad55'};
+flatmapName{6} = {'x11024_017_left_WM_Flat_68_111_81_Rad55' , 'x11024_017_right_WM_Flat_186_116_84_Rad55'};
 
 subject{7} = '12709_001';
 niftiBaseName{7} = 'HL_12709_001_';
@@ -90,7 +87,7 @@ fMRIScans{7} = {'4', '5', '10', '11'};
 refScan{7} = '5'; % scan before t2 structural
 nScans(7) = 4;
 conditionOrder{7} = {[1,3],[2,4]};
-flatmapName{7} = {'x12709_001_left_WM_Flat_85_91_84_Rad55', 'x12709_001_right_WM_Flat_155_91_89_Rad55'};
+flatmapName{7} = {'x12709_001_left_WM_Flat_69_107_84_Rad55', 'x12709_001_right_WM_Flat_175_104_89_Rad55'};
 
 %% output selected subjects daya
 subjectInfo = struct();

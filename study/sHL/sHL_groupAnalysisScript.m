@@ -1,7 +1,7 @@
-function CM_groupAnalysisScript
-%% CM_subjectAnalysisScript
-% Scripted group analysis for Comparisons at 7T and Cortical Magnification (CM) studies
-% Study dates: 2015 - 2018
+function sHL_groupAnalysisScript
+%% sHL_subjectAnalysisScript
+% Scripted group analysis for simulated hearing loss study
+% Study dates: 2017 - 2018
 
 % Info:
 % gets data from subject analysis
@@ -12,34 +12,14 @@ function CM_groupAnalysisScript
 % saves as .csv
 
 % Aims:
-% Measure cortical magnification
-% Compare acquisition protocols
-% Compare analysis methods
-% plot scanner noise
+% Measure bias from hearing loss simualtion
+% Correct bias
+% Measure how well correction works
+% plot simulated hearing loss sensation level
 
 %% Tasks:
 %% ROI analysis
-%% Comparing analysis methods
-% GLM vs pRF
-
-%% Comparison 1: GLM methods
-% Index max (IM), Centroid (C), debiased Weighted Mean (dWM)
-% Data = Sparse concatenated
-
-%% Comparison 2: pRF vs GLM
-% GLM dWM , pRF pCF
-% Data = Sparse concatenated
-
-%% Comparison 3: pTW estimation
-% GLM Beta weights
-% Split half tuning width
-% Data = Scans
-% pRF
-% Split half tuning widths
-% Data = Scans
-% Notes: Calculate subject level with matlab and plot group level with R
-
-%% Data vis and Stats
+% Data vis and Stats
 % 	pCF distribution
 %   pCF Reliability for methods
 % 	Between run correlation:
@@ -48,53 +28,6 @@ function CM_groupAnalysisScript
 %       prove they are valid - correlation matrix
 % 	pCF maps
 %       Group level or representative subject
-
-%% Comparing acquisition protocols
-% Sparse vs Continuous
-
-%% Comparison 1: BOLD activity
-% GLM Beta weights
-% Split half tuning width
-% 	Data = Scans
-% ROI average beta weights
-% 	Data = concatenated
-% Ratio between average beta weights
-% 	Data = concatenated
-
-%% Comparison 2: pCF estimation
-% pRF
-% Data = concatenated
-% pCF distribution
-% pCF Correlation between
-% Runs
-% Which is better?
-% Sparse and Continuous
-% How similar are they
-
-% GLM dWeightMean
-% Data = concatenated
-% pCF distribution
-% pCF Correlation between
-% Runs
-% Which is better?
-% Sparse and Continuous
-% How similar are they?
-
-%% Comparison 3: pTW estimation
-% GLM Beta weights
-% Split half tuning width
-% Data = Scans
-% pRF
-% Split half tuning widths
-% Data = Scans
-% Notes: Calculate subject level with matlab and plot group level with R
-
-%% Other Analysis
-% HRF estimation
-% 	Average deconvolution estimate
-% 	Average fitted params ( check if median is more appropriate than mean (in case of outliers))
-% 	Plot averaged fitted params or average of the curves
-% Notes: Calculate subject level with matlab and plot group level with R
 
 
 %% Print mrView figures
@@ -106,12 +39,12 @@ function CM_groupAnalysisScript
 %% close and clear everything
 clear all; close all; clc
 
-disp('Running CM_groupAnalysisScript...')
+disp('Running sHL_groupAnalysisScript...')
 disp('Group analysis for Cortical Magnificaiton and Comparisions at 7T studies...')
 disp('This function gets subject data and saves it in tidyVerse format...')
 
 %% get study info
-[stimInfo, glmInfo, pRFInfo, Info, plotInfo] = CM_setupStudyParams;
+[stimInfo, glmInfo, pRFInfo, Info, plotInfo] = sHL_setupStudyParams;
 
 % use ispc to set data directory
 if ispc
@@ -124,27 +57,22 @@ end
 q = char(39);
 
 %% set logicals to what we want to do
-doHRF = 1;
-doComparisions = 0;
-doCorticalMagnification = 0;
+doComparisions = 1;
 doStudyPlots = 0;
 
 %% define subjects
-% nSubjects = 8;
-iSubs2Run = [1,2,3,4,5,6,7,8];
-
-% iSubs2Run = [1,2,5,6,7,8];
-%% HRF params
-hrf_name = [];
-hrf_params = [];
-hrf_subject = [];
+% nSubjects = 7;
+iSubs2Run = [1,2,3,4,5,6,7];
 
 %% Varibles to define
 % Voxel estimates
 ve_subjectID = [];
 ve_voxelID = [];
 ve_roi = [];
+ve_hemisphere = [];
+ve_location = [];
 ve_r2 = [];
+ve_r2ATrue = [];
 %  pCF estimate value
 ve_frequency_nERB = []; % estimate values in number of ERB
 ve_frequency_kHz = []; % estimate values in kHz
@@ -164,13 +92,18 @@ tc_beta_weight = [];
 tc_beta_weight_norm  = [];
 tc_beta_weight_ConATrue  = [];
 tc_beta_weight_norm_ConATrue  = [];
-tc_beta_bin = [];
-tc_beta_freq = [];
+tc_pRF_tuning_curve = [];
+tc_pRF_tuning_curve_ConATrue = [];
+tc_beta_bin_kHz = [];
+tc_beta_freq_kHz = [];
+tc_beta_bin_nERB = [];
+tc_beta_freq_nERB = [];
 tc_beta_bin_id = [];
 tc_beta_freq_id = [];
 tc_acquistion = []; % acquistion protocol
 tc_analysis = []; % GLM or pRF
-tc_hrf = [];
+ve_comparision = [];
+% tc_hrf = [];
 tc_beta_averaging = [];
 
 % ROI Average Beta Weights
@@ -178,71 +111,56 @@ bw_subjectID = [];
 bw_roi = [];
 bw_beta_weight = [];
 bw_beta_weight_norm = [];
-bw_beta_bin = [];
 bw_beta_freq_id = [];
-bw_beta_freq = [];
+bw_beta_freq_kHz = [ ];
+bw_beta_freq_nERB = [ ];
 bw_acquistion = []; % acquistion protocol
 bw_analysis = []; % GLM or pRF
 bw_hrf = [];
 bw_beta_averaging = [];
 
-% Coritcal Magnifiction
-cm_CorticalDistance = [];
-cm_Frequency_nERB = [];
-cm_Analysis = [];
-cm_ROI = [];
-cm_r2 = [];
-cm_TuningWidth = [];
-cm_SubjectID = [];
-
-% HRF
-hrf_SubjectID = [];
-hrf_Est = [];
-hrf_EstNorm = [];
-hrf_Time = [];
-
-hrftw_SubjectID = [];
-hrftw_Est = [];
-hrftw_EstNorm = [];
-hrftw_Time = [];
-hrftw_freq = [];
-
-hrfparams_name = [];
-hrfparams_params = [];
-hrfparams_subject = [];
 
 %% Varibles to define
 % Voxel estimates
 % roi
 roiNames_data = {'LeftGR_GLM', 'LeftGRa_GLM', 'LeftGRp_GLM', 'RightGR_GLM', 'RightGRa_GLM', 'RightGRp_GLM'};
 roiNames_table = {'Left', 'Left Anterior', 'Left Posterior', 'Right', 'Right Anterior', 'Right Posterior'};
+hemisphere = {'Left', 'Left', 'Left', 'Right', 'Right', 'Right'};
+location = {'Both', 'Anterior', 'Posterior', 'Both', 'Anterior', 'Posterior'};
 
 % acquistion
-acquistionNames = {'Sparse', 'Continuous'};
+acquistionNames = {'NH', 'sHL'};
 
 % concatenation
-concatNames_data = {'ConcatenationSparse', 'scan_1', 'scan_3';...
-    'ConcatenationCont',  'scan_2', 'scan_4'};
-concatNames_table = {'Sparse', 'Sparse_1', 'Sparse_2';...
-    'Continuous',  'Continuous_3', 'Continuous_4'};
+concatNames_data = {'ConcatenationNH_Smoothed_fwhm2', 'scan_', 'scan_';...
+    'ConcatenationHLsim_Smoothed_fwhm2', 'scan_', 'scan_'};
+concatNames_table = {'NH', 'NH_','NH_' ;...
+    'sHL', 'sHL_', 'sHL_'};
 
 % analysis
 pRFanalysisName = ['pRF_', pRFInfo.pRFrestrictROI];
-analysisNames_data = {'glm_hrfDoubleGamma', 'glm_hrfBoxcar', 'pRF'};
-analysisNames_table= {'GLM', 'GLM', 'pRF'};
-hrfNames_table = {'Double Gamma', 'Box Car', 'Difference of Gamma'};
+analysisNames_data = {'glm_hrfDoubleGamma', 'pRF',[];...
+                    'glm_hrfDoubleGamma', 'pRF', 'pRF_SL_level'};
+analysisNames_table= {'GLM', 'pRF',[];...
+                        'GLM', 'pRF', 'pRF_SL_level'};
+hrfNames_table = {'Double Gamma', 'Gamma'};
 
 % estimation method
-estimateGLMFreqNames_data = {'Centriod', 'julien_pCF', 'indexMax'};
-estimateGLMTuningName_data = {'Spread', 'julien_pTW', 'NA'};
-estimateGLMFreqNames_table = {'Centriod', 'Debiased Centriod', 'Max'};
-estimateGLMTuningName_table = {'Spread', 'Debiased Spread', 'NA'};
+% estimateGLMFreqNames_data = {'Centroid', 'julien_pCF', 'indexMax'};
+% estimateGLMTuningName_data = {'Spread', 'julien_pTW', 'NA'};
+% estimateGLMFreqNames_table = {'Centroid', 'Debiased Centroid', 'Max'};
+% estimateGLMTuningName_table = {'Spread', 'Debiased Spread', 'NA'};
+
+estimateGLMFreqNames_data = {'julien_pCF'};
+estimateGLMTuningName_data = {'julien_pTW'};
+estimateGLMFreqNames_table = {'Debiased Centroid'};
+estimateGLMTuningName_table = {'Debiased Spread', 'NA'};
 
 % Split Tuning Curves
 
 % acquistion
-acquistionNames_data = {'ConcatenationSparse','ConcatenationCont'};
-acquistionNames_table = {'Sparse', 'Continuous'};
+acquistionNames_data = {'ConcatenationNH_Smoothed_fwhm2','ConcatenationHLsim_Smoothed_fwhm2'};
+acquistionNames_table = {'NH', 'sHL'};
 
 run_names = {'scan_1', 'scan_3';...
     'scan_2', 'scan_4'};
@@ -258,135 +176,36 @@ beta_hrfNames_table = {'Double Gamma'}; % {'Double Gamma', 'Box Car'};
 % used Split tuning curve variables plus:
 betaAveragingNames_table_bw = {'None','Moving Average'}; %{'Binned'};
 
-%% Study stuff to plot
-% could just add to the end of data as a different acquistion?
-if doStudyPlots
-    noise_temp_level = CM_plotScannerNoise;    
-    noise_temp_freq = stimInfo.stimFreqs;
-    
-    % moving average
-    nBins = 8;
-    windowAvSize = size(noise_temp_freq,2)/nBins;
-    loopLength = size(noise_temp_freq,2) - windowAvSize + 1;
-    noise_temp_level_mv = nan(size(noise_temp_freq,1),loopLength);
-    noise_temp_freq_mv = nan(1,loopLength);
-    
-    for iBeta = 1:loopLength
-        noise_temp_level_mv(iBeta) = round(mean(noise_temp_level(iBeta:iBeta+windowAvSize-1)),3);
-        noise_temp_freq_mv(iBeta) = round(mean(noise_temp_freq(iBeta:iBeta+windowAvSize-1)),3);
-    end
-    
-    noise_freq = [noise_temp_level'; noise_temp_level_mv'];
-    noise_level = [noise_temp_freq'; noise_temp_freq_mv'];
-    
-    hrf_table = [];
-    hrf_table = table(noise_freq,noise_level,...
-        'VariableNames',{'noise_freq', 'noise_level'});
-    
-    writetable(hrf_table, 'CM_scanner_noise.csv')    
-end
 
 %% get data and tidy
 for iSub = 1:length(iSubs2Run)
-    
+
     data = [];
     % Get subject info
-    subjectInfo = get_SubjectInfo_CM(iSubs2Run(iSub));
+    subjectInfo = get_SubjectInfo_sHL(iSubs2Run(iSub));
     % Subject ID, flatmap names
     saveName = [subjectInfo.subjectID '_data.mat'];
     % move to subject folder
     cd(fullfile(Info.dataDir,Info.studyDir,subjectInfo.subjectID));
     % Load subject data
     load(saveName);
-    
+
     subjectNumber = iSubs2Run(iSub);
     disp(['tidying subject ' num2str(subjectNumber) ' data...']);
-    
-    %% HRF
-    if doHRF
-        % average hrf params for 3T analysis
-        % TidyVerse
-        % Row: observation = subject
-        % Column: Variable = fitted hrf param
-                
-        % HRF fitted estimates
-        % save params to plot histograms
-        % save HRF from fitted params to show shape
-        % outside loop - calculate averaged params hrf and save that for plotting
-        
-        hrfSaveNames = {'x_Gamma', 'x_doubleGamma', 'x_dGamma',};
-        hrfNames = {'Gamma', 'doubleGamma', 'diffofGamma'};
 
-        
-        for iHRF = 1:length(hrfSaveNames)
-            
-%             temp_hrfparams_params = [];
-            temp_hrfparams_params = eval(['data.hrf.',hrfSaveNames{iHRF} ';']);
-            temp_hrfparams_name = repmat(hrfNames{iHRF},length(temp_hrfparams_params),1);
-            temp_hrfparams_subject = repmat(iSub,length(temp_hrfparams_params),1);
-            
-            hrfparams_name = [hrf_name; string(temp_hrfparams_name)];
-            hrfparams_params = [hrf_params; temp_hrfparams_params'];
-            hrfparams_subject = [hrf_subject; temp_hrfparams_subject];
-            
-        end
-        
-        % HRF estimate
-        temp_Est = data.hrf.deconv';
-        temp_EstNorm = data.hrf.deconv' ./ max(data.hrf.deconv);
-        temp_Time = data.hrf.estimate.time';
-        nEstimates = length(temp_Est);
-        temp_subjectID = repmat(subjectNumber,nEstimates,1);                                    
-                                    
-        hrf_SubjectID = [hrf_SubjectID; temp_subjectID];
-        hrf_Est = [hrf_Est; temp_Est];
-        hrf_EstNorm = [hrf_EstNorm; temp_EstNorm];
-        hrf_Time = [hrf_Time; temp_Time];
-        
-        % HRF TW estimate
-%         data.hrf.deconvTW
-%         data.hrf.estimate.time
-        frequencyBin = -7:7;
-        temp_hrftw_Est = [];
-        temp_hrftw_Est_norm = [];
-        temp_hrftw_norm = data.hrf.deconvTW ./ max(data.hrf.deconvTW);
-        for iFreq = 1:length(frequencyBin)
-            temp_hrftw_Est = [temp_hrftw_Est, data.hrf.deconvTW(iFreq,:)];
-            temp_hrftw_Est_norm = [temp_hrftw_Est_norm, temp_hrftw_norm(iFreq,:)];
-        end
-        
-        temp_hrftw_freq = repmat(frequencyBin,1,length(data.hrf.estimate.time));
-        temp_hrftw_Time = repmat(data.hrf.estimate.time,1,length(frequencyBin));
-        nEstimates = length(temp_hrftw_Time);
-        temp_hrftw_subjectID = repmat(subjectNumber,nEstimates,1); 
-        
-        hrftw_SubjectID = [hrftw_SubjectID; temp_hrftw_subjectID];
-        hrftw_Est = [hrftw_Est; temp_hrftw_Est'];
-        hrftw_EstNorm = [hrftw_EstNorm; temp_hrftw_Est_norm'];
-        hrftw_Time = [hrftw_Time; temp_hrftw_Time'];
-        hrftw_freq = [hrftw_freq; temp_hrftw_freq'];
-        
-        % Matlab
-        % save hrf params in seperate variables, n by m, n = suject; m = parameters.
-        
-        for iHRF = 1:length(hrfSaveNames)
-            temp_hrf_params = eval(['data.hrf.',hrfSaveNames{iHRF} ';']);
-            eval(['hrf.',  hrfNames{iHRF},'_data(iSubs2Run(iSub),:) = temp_hrf_params;']);
-        end
-    end
-    
+
     %% 7T comparisions %%
     if doComparisions
-        
+
         %% save data in TidyVerse
         % dataset 1: pCF estiamtes
         % need one table with all pCF estiamtes
-        
+
         %% Comparing analysis methods
         %   GLM vs pRF
-        
+
         %   Data = Sparse concatenated and split
-        
+
         %% Data vis and Stats
         % 	pCF distribution
         %   pCF Reliability for methods
@@ -397,69 +216,81 @@ for iSub = 1:length(iSubs2Run)
         % 	pCF maps
         %       Group level or representative subject
         %   Average split half tuning curves
-        
+
         % Comparison 1: GLM methods
         %   Index max (IM), Centroid (C), debiased Weighted Mean (dWM)
-        
+
         % Comparison 2: pRF vs GLM
         %   GLM dWM , pRF pCF
-        
+
         % Comparison 3: pTW estimation
         %   GLM Beta weights  , pRF pTW
         %   Data = Scans / Split half tuning curves
         %   Notes: need to calcuate split half tuning curves
-        
-        
+
+
         %% Begin comparing: Voxel estimates
         % outcomes:
         % Distribution
         % Correlation
-        
+
         % Transform data into tidyVerse
         % Row: observation = voxel
         % Column: Variable = everything else
         % subject, pCF estimate value, pTW estimate value, roi, acquistion, concatenation, analysis, hrf, estimation method
-        
+
         disp(['Subject ' num2str(iSub) ': Tidying Voxel Estimates'])
-        
+
         for iROI = 1:length(roiNames_data)
             roiName_data = roiNames_data{iROI};
             roiName_table = roiNames_table{iROI};
+            hemisphere_table = hemisphere{iROI};
+            location_table = location{iROI};
+            iScan = 0;
             for iAcq = 1:length(acquistionNames)
                 acquistionName = acquistionNames{iAcq};
-                
+
                 for iConcat = 1:size(concatNames_data,2)
                     % get from group and scans
+                    concatName_data = [];
+                    concatName_table = [];
                     concatName_data = concatNames_data{iAcq,iConcat};
                     concatName_table = concatNames_table{iAcq,iConcat};
-                    
-                    for iAnal = 1:length(analysisNames_data)
-                        analysisName_data = analysisNames_data{iAnal};
-                        analysisName_table = analysisNames_table{iAnal};
-                        
-                        if ~strcmp(analysisName_data,'pRF')
+
+                    if strcmp(concatName_data,'scan_')
+
+                        concatName_table = [concatName_table, num2str(iConcat-1)];
+                        iScan = subjectInfo.conditionOrder{iAcq}(iConcat-1);
+                        concatName_data = [concatName_data, num2str(iScan)];
+
+                    end
+
+                    for iAnal = 1:size(analysisNames_data,2)
+                        analysisName_data = analysisNames_data{iAcq,iAnal};
+                        analysisName_table = analysisNames_table{iAcq,iAnal};
+
+                        if ~isempty(analysisName_data)
+
+                        if strcmp(analysisName_table,'GLM')
                             estimateFreqNames_data = estimateGLMFreqNames_data;
                             estimateTuningName_data = estimateGLMTuningName_data;
                             estimateFreqNames_table = estimateGLMFreqNames_table;
                             estimateTuningName_table = estimateGLMTuningName_table;
                             if ~(iConcat == 1)
-                                analysisName_data = [analysisNames_data{iAnal} ,'_nCons_32'];
-                                analysisName_table = analysisNames_table{iAnal};
+                                analysisName_data = [analysisNames_data{iAcq,iAnal} ,'_nCons_32'];
+                                analysisName_table = analysisNames_table{iAcq,iAnal};
                             end
-%                             constantOffset = 1; % correct for not converting to nERB correctly
                         else
                             estimateFreqNames_data = {'PrefCentreFreq'};
                             estimateTuningName_data = {'rfHalfWidth'};
                             estimateFreqNames_table = {'population Centre Frequency'};
                             estimateTuningName_table = {'population Tuning Width'};
-                            
-%                             constantOffset = 0;
                         end
-                        
+
                         for iEst = 1:length(estimateFreqNames_data)
-                            
+
                             % to save: subject, pCF estimate value, pTW estimate value, roi, acquistion, concatenation, analysis, hrf, estimation method
-                            
+
                             % pCF estimate value
                             % get pCF estimate values from data struct
                             % repeat subject, roi, acquistion, concatenation, analysis, estimation method - nVoxel times
@@ -472,7 +303,7 @@ for iSub = 1:length(iSubs2Run)
                             end
 %                             temp_frequency_nERB = temp_frequency_nERB - constantOffset;
                             temp_frequency_kHz = funInvNErb(temp_frequency_nERB); % estimate values in kHz
-                            
+
                             % number of observations
                             nVoxels = length(temp_frequency_nERB);
 
@@ -483,7 +314,7 @@ for iSub = 1:length(iSubs2Run)
                                 startVoxels = totalVoxels;
                                 totalVoxels = totalVoxels + nVoxels - 1;
                             end
-                            
+
                             % pTW estimate value
                             if ~strcmp(estimateTuningName_data{iEst},'NA')
                                 eval(['temp_selectivity = data.' roiName_data '.' concatName_data '.' analysisName_data '.' estimateTuningName_data{iEst} ';']);
@@ -497,111 +328,142 @@ for iSub = 1:length(iSubs2Run)
                             else
                                 temp_selectivity_nERB = nan(1,nVoxels);
                                 temp_selectivity_kHz = nan(1,nVoxels);
-                                
-                            end                            
-                            
+
+                            end
+
                             eval(['temp_r2 = data.' roiName_data '.' concatName_data '.' analysisName_data '.r2;']);
                             if iscell(temp_r2)
                                 temp_r2 = temp_r2{:}; % estimate values in number of ERB
                             else
                                 temp_r2 = temp_r2;
                             end
-                            
+                            if strcmp(analysisName_data,analysisNames_data{1}) && strcmp(concatName_data,concatNames_data{1})
+                                temp_r2ATrue = temp_r2;
+                            end
+
                             % subject
                             temp_subjectID = repmat(subjectNumber,nVoxels,1);
-                            % voxel                            
+                            % voxel
                             temp_voxelID = startVoxels:totalVoxels;
                             % roi
                             temp_roi = repmat(roiName_table,nVoxels,1);
+                            % hemisphere
+                            temp_hemisphere = repmat(hemisphere_table,nVoxels,1);
+                            % location
+                            temp_location = repmat(location_table,nVoxels,1);
                             % acquistion
                             temp_acquistion = repmat(acquistionName,nVoxels,1);
                             % concatenation
                             temp_concatenation = repmat(concatName_table,nVoxels,1);
                             % analysis
                             temp_analysis = repmat(analysisName_table,nVoxels,1);
-                            % hrf
-                            temp_hrf = repmat(hrfNames_table{iAnal},nVoxels,1);
+                            % comparision
+                            temp_comparision = repmat([acquistionName, '_', analysisName_table],nVoxels,1);
                             % estimation method
                             temp_estimation = repmat(estimateFreqNames_table{iEst},nVoxels,1);
-                            
+
                             % concatenate data
                             ve_frequency_nERB = [ve_frequency_nERB; temp_frequency_nERB'];
                             ve_frequency_kHz = [ve_frequency_kHz; temp_frequency_kHz'];
                             ve_selectivity_nERB = [ve_selectivity_nERB; temp_selectivity_nERB'];
                             ve_selectivity_kHz = [ve_selectivity_kHz; temp_selectivity_kHz'];
                             ve_r2 = [ve_r2; temp_r2'];
+                            ve_r2ATrue = [ve_r2ATrue; temp_r2ATrue'];
                             ve_subjectID = [ve_subjectID; temp_subjectID];
                             ve_voxelID = [ve_voxelID; temp_voxelID'];
                             ve_roi = [ve_roi; string(temp_roi)];
+                            ve_hemisphere = [ve_hemisphere; string(temp_hemisphere)];
+                            ve_location = [ve_location; string(temp_location)];
                             ve_acquistion = [ve_acquistion; string(temp_acquistion)];
                             ve_concatenation = [ve_concatenation; string(temp_concatenation)];
                             ve_analysis = [ve_analysis; string(temp_analysis)];
-                            ve_hrf = [ve_hrf; string(temp_hrf)];
+                            ve_comparision = [ve_comparision; string(temp_comparision)];
                             ve_estimation = [ve_estimation; string(temp_estimation)];
-                            
+
+                        end
                         end
                     end
                 end
             end
             %     end
-            
+
             %% fin comparing: Voxel estimates
-            
+
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
+
             %% Begin comparing: ROI average GLM beta weights
             % this will require calucating ROI averages before exporting to tidyVerse
             % split tuning Curves
             % moving average
-            
+
             % ROI average estimate
             % outcomes:
             % Split tuning Curves
             % data: binned
             % ROI Average Beta Weights
             % data: glm moving average of all betas; hrf = Double Gamma; concatenated data
-            
+
             % Split Tuning Curves
             % data: glm 8 bins; hrf = Double Gamma; split runs
-            
+
             %% Split Tuning Curves
             % data: split
             %       glm 8 bins
-            
+
             % Transform data into tidyVerse
             % Row = observation: beta weight at x frequency point
             % Column = Variable:
             % subject, beta weight value, frequency point, frequency group, roi, acquistion
-            
+
             disp(['Subject ' num2str(iSub) ': Tidying Split Tuning Curves'])
-            
+
             for iAcq = 1:length(acquistionNames_table)
-                
+
                 acquistionName = acquistionNames{iAcq};
-                runA_name = run_names{iAcq,1};
-                runB_name = run_names{iAcq,2};
-                
+
+%                 runA_name = run_names{iAcq,1};
+%                 runB_name = run_names{iAcq,2};
+                runA_name = ['scan_' num2str(subjectInfo.conditionOrder{iAcq}(1))];
+                runB_name = ['scan_' num2str(subjectInfo.conditionOrder{iAcq}(2))];
+
                 for iAnal = 1:length(beta_analysisNames_data)
-                    
+
                     for iCons = 1:length(betaAveraging_data_tc)
-                        
+
                         analysisName_data = [beta_analysisNames_data{iAnal}, betaAveraging_data_tc{iCons}];
                         analysisName_table = beta_analysisNames_table{iAnal};
-                        
+
+                        % get data
                         eval(['temp_betas_runA_cell = data.' roiName_data '.' runA_name '.' analysisName_data '.betas;']);
                         eval(['temp_betas_runB_cell = data.' roiName_data '.' runB_name '.' analysisName_data '.betas;']);
-                        
+
+%                         eval(['temp_pTW_runA = data.' roiName_data '.' runA_name '.pRF.rfHalfWidth;']);
+%                         eval(['temp_pTW_runB = data.' roiName_data '.' runB_name '.pRF.rfHalfWidth;']);
+%
+%                         eval(['temp_pCF_runA = data.' roiName_data '.' runA_name '.pRF.PrefCentreFreq;']);
+%                         eval(['temp_pCF_runB = data.' roiName_data '.' runB_name '.pRF.PrefCentreFreq;']);
+
+                        % unpack data
+                        % glm
                         temp_betas_runA = nan(size(temp_betas_runA_cell{1},2),length(temp_betas_runA_cell));
                         temp_betas_runB = nan(size(temp_betas_runA_cell{1},2),length(temp_betas_runA_cell));
                         for iBeta = 1:length(temp_betas_runA_cell)
-                            % unpack data
+
                             temp_betas_runA(:,iBeta) = temp_betas_runA_cell{iBeta};
                             temp_betas_runB(:,iBeta) = temp_betas_runB_cell{iBeta};
                         end
-                        
+
+                        % pRF
+
+%                         temp_pTW_runA = temp_pTW_runA_cell{:};
+%                         temp_pTW_runB = temp_pTW_runB_cell{:};
+%
+%                         temp_pCF_runA = temp_pCF_runA_cell{:};
+%                         temp_pCF_runB = temp_pCF_runB_cell{:};
+
                         [~, VoxelIndex_A] = max(temp_betas_runA,[],2);
                         [~, VoxelIndex_B] = max(temp_betas_runB,[],2);
-                        
+
                         if iAcq ~= 1
                             VoxelIndex_A_ConATrue = round((VoxelIndex_A + VoxelIndex_B)./2);
                             VoxelIndex_B_ConATrue = round((VoxelIndex_A + VoxelIndex_B)./2);
@@ -609,49 +471,81 @@ for iSub = 1:length(iSubs2Run)
                             VoxelIndex_A_ConATrue = VoxelIndex_A;
                             VoxelIndex_B_ConATrue = VoxelIndex_B;
                         end
-                        
+
                         % compute split mean
                         splitA = nan(size(temp_betas_runA,2),size(temp_betas_runA,2));
                         splitB = nan(size(temp_betas_runA,2),size(temp_betas_runA,2));
                         splitA_ConATrue = splitA;
                         splitB_ConATrue = splitB;
-                        
+
+%                         splitA_pRF_pTW = nan(size(temp_betas_runA,2),1);
+%                         splitB_pRF_pTW = splitA_pRF_pTW;
+%                         splitA_pCF_pTW = splitA_pRF_pTW;
+%                         splitB_pCF_pTW = splitA_pRF_pTW;
+
                         for n = 1:size(temp_betas_runA,2)
                             splitA(n,:) = sum(temp_betas_runA(VoxelIndex_B==n,:))/sum(VoxelIndex_B==n);
                             splitB(n,:) = sum(temp_betas_runB(VoxelIndex_A==n,:))/sum(VoxelIndex_A==n);
-                            
+
                             splitA_ConATrue(n,:) = sum(temp_betas_runA(VoxelIndex_B_ConATrue==n,:))/sum(VoxelIndex_B_ConATrue==n);
                             splitB_ConATrue(n,:) = sum(temp_betas_runB(VoxelIndex_A_ConATrue==n,:))/sum(VoxelIndex_A_ConATrue==n);
-                            
+
                             % if we want pRF split mean - get data and average pTW here
                             % just get the pRF (pCf and pTW) params for the voxels at each bin and average
+
+%                             splitA_pRF_pTW(n) = nanmean(temp_pTW_runA(VoxelIndex_B==n));
+%                             splitB_pRF_pTW(n) = nanmean(temp_pTW_runB(VoxelIndex_A==n));
+%
+%                             splitA_pRF_pCF(n) = nanmean(temp_pCF_runA(VoxelIndex_B==n));
+%                             splitB_pRF_pCF(n) = nanmean(temp_pCF_runB(VoxelIndex_A==n));
+%
+%                             splitA_pRF_pTW_ConATrue(n) = nanmean(temp_pTW_runA(VoxelIndex_B_ConATrue==n));
+%                             splitB_pRF_pTW_ConATrue(n) = nanmean(temp_pTW_runB(VoxelIndex_A_ConATrue==n));
+%
+%                             splitA_pRF_pCF_ConATrue(n) = nanmean(temp_pCF_runA(VoxelIndex_B_ConATrue==n));
+%                             splitB_pRF_pCF_ConATrue(n) = nanmean(temp_pCF_runB(VoxelIndex_A_ConATrue==n));
+
                         end
                         splitMean = (splitA + splitB) / 2;
                         splitMeanNorm = splitMean./ max(max(splitMean));
-                        
+
+%                         splitMean_pRF_pTW = (splitA_pRF_pTW + splitB_pRF_pTW) / 2;
+%                         splitMean_pRF_pCF = (splitA_pRF_pCF + splitB_pRF_pCF) / 2;
+%
                         splitMean_ConATrue = (splitA_ConATrue + splitB_ConATrue) / 2;
-                        splitMeanNorm_ConATrue = splitMean_ConATrue./ max(max(splitMean_ConATrue));                        
-                        
+                        splitMeanNorm_ConATrue = splitMean_ConATrue./ max(max(splitMean_ConATrue));
+
+%                         splitMean_pRF_pTW_ConATrue = (splitA_pRF_pTW_ConATrue + splitB_pRF_pTW_ConATrue) / 2;
+%                         splitMean_pRF_pCF_ConATrue = (splitA_pRF_pCF_ConATrue + splitB_pRF_pCF_ConATrue) / 2;
+%
                         % tidy data
                         c = 1;
+%                         pRF_tuning_curves = nan(size(temp_betas_runA,2),size(temp_betas_runA,2));
                         for iBeta = 1:size(splitMean,1)
+                        % pRF
+%                         pRF_tuning_curves(iBeta,:) = def_Gaussian([splitMean_pRF_pCF(iBeta), splitMean_pRF_pTW(iBeta)],stimInfo.stimNERBs_bin);
+%                         pRF_tuning_curves_ConATrue(iBeta,:) = def_Gaussian([splitMean_pRF_pCF_ConATrue(iBeta), splitMean_pRF_pTW_ConATrue(iBeta)],stimInfo.stimNERBs_bin);
                             for iFreq = 1:size(splitMean,2)
                                 eval(['temp_beta_bin' num2str(iBeta) '_freq_' num2str(iFreq) ' = splitMean(iBeta,iFreq);'])
-                                
+
                                 temp_beta_weight(c) = splitMean(iBeta,iFreq);
                                 temp_beta_weight_norm(c) = splitMeanNorm(iBeta,iFreq);
+%                                 temp_pRF_tuning_curve(c) = pRF_tuning_curves(iBeta,iFreq);
                                 temp_beta_weight_ConATrue(c) = splitMean_ConATrue(iBeta,iFreq);
                                 temp_beta_weight_norm_ConATrue(c) = splitMeanNorm_ConATrue(iBeta,iFreq);
+%                                 temp_pRF_tuning_curve_ConATrue(c) = pRF_tuning_curves_ConATrue(iBeta,iFreq);
                                 temp_beta_bin_id(c) = iBeta;
                                 temp_beta_freq_id(c) = iFreq;
-                                temp_beta_bin(c) = round(stimInfo.stimFreqs_bin(iBeta),3);
-                                temp_beta_freq(c) = round(stimInfo.stimFreqs_bin(iFreq),3);
+                                temp_beta_bin_kHz(c) = round(stimInfo.stimFreqs_bin(iBeta),3);
+                                temp_beta_freq_kHz(c) = round(stimInfo.stimFreqs_bin(iFreq),3);
+                                temp_beta_bin_nERB(c) = round(stimInfo.stimNERBs_bin(iBeta),3);
+                                temp_beta_freq_nERB(c) = round(stimInfo.stimNERBs_bin(iFreq),3);
                                 c = c + 1;
                             end
                         end
-                        
+
                         nVoxels = length(temp_beta_weight);
-                        
+
                         % subject
                         temp_subjectID = repmat(subjectNumber,nVoxels,1);
                         % roi
@@ -663,85 +557,91 @@ for iSub = 1:length(iSubs2Run)
                         % number of conditions
                         temp_beta_averaging = repmat(betaAveragingNames_table_tc{iCons},nVoxels,1);
                         % hrf
-                        temp_hrf = repmat(beta_hrfNames_table{iAnal},nVoxels,1);
-                        
+%                         temp_hrf = repmat(beta_hrfNames_table{iAnal},nVoxels,1);
+
                         % concatenate data
                         tc_beta_weight = [tc_beta_weight; temp_beta_weight'];
                         tc_beta_weight_norm = [tc_beta_weight_norm; temp_beta_weight_norm'];
                         tc_beta_weight_ConATrue = [tc_beta_weight_ConATrue; temp_beta_weight_ConATrue'];
                         tc_beta_weight_norm_ConATrue = [tc_beta_weight_norm_ConATrue; temp_beta_weight_norm_ConATrue'];
+%                         tc_pRF_tuning_curve = [tc_pRF_tuning_curve; temp_pRF_tuning_curve'];
+%                         tc_pRF_tuning_curve_ConATrue = [tc_pRF_tuning_curve_ConATrue; temp_pRF_tuning_curve_ConATrue'];
                         tc_beta_bin_id = [tc_beta_bin_id; temp_beta_bin_id'];
                         tc_beta_freq_id = [tc_beta_freq_id; temp_beta_freq_id'];
-                        tc_beta_bin = [tc_beta_bin; temp_beta_bin'];
-                        tc_beta_freq = [tc_beta_freq; temp_beta_freq'];
+                        tc_beta_bin_kHz = [tc_beta_bin_kHz; temp_beta_bin_kHz'];
+                        tc_beta_freq_kHz = [tc_beta_freq_kHz; temp_beta_freq_kHz'];
+                        tc_beta_freq_nERB = [tc_beta_freq_nERB; temp_beta_freq_nERB'];
+                        tc_beta_bin_nERB = [tc_beta_bin_nERB; temp_beta_bin_nERB'];
                         tc_subjectID = [tc_subjectID; temp_subjectID];
                         tc_roi = [tc_roi; string(temp_roi)];
                         tc_acquistion = [tc_acquistion; string(temp_acquistion)];
                         tc_analysis = [tc_analysis; string(temp_analysis)];
                         tc_beta_averaging = [tc_beta_averaging; string(temp_beta_averaging)];
-                        tc_hrf = [tc_hrf; string(temp_hrf)];
+%                         tc_hrf = [tc_hrf; string(temp_hrf)];
                     end
-                    
+
                     %% ROI Average Beta Weights
                     % data: concatenated
                     %       glm all cons moving average
-                    
+
                     % Transform data into tidyVerse
                     % Row = observation: beta weight at x frequency point
                     % Column = Variable:
                     % subject, beta weight value, frequency point, roi, acquistion
-                    
+
                     disp(['Subject ' num2str(iSub) ': Tidying Average Beta Weights'])
-                    
+
                     acquistionName_data = acquistionNames_data{iAcq};
                     acquistionName_table = acquistionNames_table{iAcq};
-                    
+
                     temp_beta_freq = [];
-                    
+
                     for iAv = 1:length(betaAveragingNames_table_bw)
-                        
+
                         analysisName_data = beta_analysisNames_data{iAnal};
                         analysisName_table = beta_analysisNames_table{iAnal};
-                        
+
                         % get data
                         eval(['temp_betas_cell = data.' roiName_data '.' acquistionName_data '.' analysisName_data '.betas;']);
-                        
+
                         temp_betas = nan(size(temp_betas_cell{1},2),length(temp_betas_cell));
-                        
+
                         for iBeta = 1:length(temp_betas_cell)
                             % unpack data
                             temp_betas(:,iBeta) = temp_betas_cell{iBeta};
                         end
-                        
+
                         if strcmp(betaAveragingNames_table_bw{iAv},betaAveragingNames_table_bw{1})
                             % mean
                             temp_beta_weight = mean(temp_betas);
-                            
-                            temp_beta_freq = round(stimInfo.stimFreqs,3);
-                            
+
+                            temp_beta_freq_kHz = round(stimInfo.stimFreqs,3);
+                            temp_beta_freq_nERB = round(stimInfo.stimNERBs,3);
                         else
                             % moving average
                             nBins = 8;
                             windowAvSize = size(temp_betas,2)/nBins;
-                            
+
                             loopLength = size(temp_betas,2) - windowAvSize + 1;
                             temp_betas_mv = nan(size(temp_betas,1),loopLength);
-                            temp_beta_freq = nan(1,loopLength);
-                            
+                            temp_beta_freq_kHz = nan(1,loopLength);
+                            temp_beta_freq_nERB = nan(1,loopLength);
+
                             for iBeta = 1:loopLength
                                 temp_betas_mv(:,iBeta) = nanmean(temp_betas(:,iBeta:iBeta+windowAvSize-1),2);
-                                temp_beta_freq(iBeta) = round(mean(stimInfo.stimFreqs(iBeta:iBeta+windowAvSize-1)),3);
+                                temp_beta_freq_kHz(iBeta) = round(mean(stimInfo.stimFreqs(iBeta:iBeta+windowAvSize-1)),3);
+                                temp_beta_freq_nERB(iBeta) = round(mean(stimInfo.stimNERBs(iBeta:iBeta+windowAvSize-1)),3);
                             end
-                            
-                            temp_beta_weight = mean(temp_betas_mv);                            
+
+                            temp_beta_weight = mean(temp_betas_mv);
 
                         end
-                        
+
                         temp_beta_weight_norm = temp_beta_weight ./ max(temp_beta_weight);
-                        
+
                         nFrequencies = length(temp_beta_weight);
                         temp_beta_freq_id = 1:nFrequencies;
-                        
+
                         % subject
                         temp_subjectID = repmat(subjectNumber,nFrequencies,1);
                         % roi
@@ -753,86 +653,31 @@ for iSub = 1:length(iSubs2Run)
                         % number of conditions
                         temp_beta_averaging = repmat(betaAveragingNames_table_bw{iAv},nFrequencies,1);
                         % hrf
-                        temp_hrf = repmat(beta_hrfNames_table{iAnal},nFrequencies,1);                        
-                        
+%                         temp_hrf = repmat(beta_hrfNames_table{iAnal},nFrequencies,1);
+
                         % concatenate data
                         bw_beta_weight = [bw_beta_weight; temp_beta_weight'];
                         bw_beta_weight_norm = [bw_beta_weight_norm; temp_beta_weight_norm'];
-                        bw_beta_freq = [bw_beta_freq; temp_beta_freq'];
+                        bw_beta_freq_kHz = [bw_beta_freq_kHz; temp_beta_freq_kHz'];
+                        bw_beta_freq_nERB = [bw_beta_freq_nERB; temp_beta_freq_nERB'];
                         bw_beta_freq_id = [bw_beta_freq_id; temp_beta_freq_id'];
                         bw_subjectID = [bw_subjectID; temp_subjectID];
                         bw_roi = [bw_roi; string(temp_roi)];
                         bw_acquistion = [bw_acquistion; string(temp_acquistion)];
                         bw_analysis = [bw_analysis; string(temp_analysis)];
                         bw_beta_averaging = [bw_beta_averaging; string(temp_beta_averaging)];
-                        bw_hrf = [bw_hrf; string(temp_hrf)];
+%                         bw_hrf = [bw_hrf; string(temp_hrf)];
                     end
-                    
+
                 end
             end
-            
+
         end
-        
+
         %% fin comparing: ROI average GLM beta weights
     end
-    
-    %% Cortical Magnification %%
-    if doCorticalMagnification
-        pRFanalysisName = ['pRF_', pRFInfo.pRFrestrictROI];
-        analysisNames = {'glm_hrfDoubleGamma',pRFanalysisName};
-        analysisSaveName = {'GLM','pRF'};
-        AP = {'a','p'};
-        analName = {'GLM', 'pRF'};
-        roiAnalName = {'GLM'};
-        roiAnalNum = 1;
 
-        for iSide = 1:length(Info.Sides)
-            for iGroup = 1:length(glmInfo.groupNames)
-                groupName = glmInfo.groupNames{iGroup};
-                for iAnal = 1:length(analysisNames)
-                    
-                    analysisName_data = analysisNames{iAnal};
-                    for iAP = 1:length(AP)
-                        
-                        roiSaveName = [Info.Sides{iSide}, 'GR' AP{iAP} '_' roiAnalName{roiAnalNum}];
-                        roiName_data = [Info.Sides{iSide}, 'GR' AP{iAP}];
-                        
-                        eval(['tempCorticalDistance = data.' roiSaveName '.' groupName '.' analysisName_data '.tonotopicMagnificaion.relativeDistances(2,:);']);
-                        eval(['tempFrequency = data.' roiSaveName '.' groupName '.' analysisName_data '.tonotopicMagnificaion.pCF;']);
-                        eval(['tempFrequencycheck = data.' roiSaveName '.' groupName '.' analysisName_data '.tonotopicMagnificaion.pCFcheck{3};']);
-                        eval(['tempTuningWidth = data.' roiSaveName '.' groupName '.' analysisName_data '.tonotopicMagnificaion.pTW;']);
-                        eval(['tempR2 = data.' roiSaveName '.' groupName '.' analysisName_data '.tonotopicMagnificaion.r2;']);
-                        
-                        nVoxels = length(tempFrequency);
-                        tempAnalysis = repmat(analysisSaveName{iAnal},nVoxels,1);
-                        tempROI = repmat(roiName_data,nVoxels,1);                        
-                              
-                        % subject
-                        temp_subjectID = repmat(subjectNumber,nVoxels,1);
-                        
-                        cm_r2 = [cm_r2; tempR2'];
-                        cm_TuningWidth = [cm_TuningWidth; tempTuningWidth'];
-                        cm_CorticalDistance = [cm_CorticalDistance; tempCorticalDistance'];
-                        cm_Frequency_nERB = [cm_Frequency_nERB; tempFrequency'];
-                        if isempty(cm_Analysis)
-                            cm_Analysis = tempAnalysis;
-                            cm_ROI = tempROI;
-                        else
-                            cm_Analysis = char(cm_Analysis,tempAnalysis);
-                            cm_ROI = char(cm_ROI,tempROI);
-                        end
-                        
-                        cm_SubjectID = [cm_SubjectID; temp_subjectID];
-                        
-                    end
-                    
-                end
-            end
-        end
-        
-        
-    end
-    
+
 end % subject loop end
 
 %% save data to file
@@ -840,143 +685,168 @@ disp('saving data...')
 % move to group data save location
 cd(fullfile(Info.dataDir,Info.studyDir,'groupAnalysis'));
 
+%% Save Comparisions
 if doComparisions
     % Voxel estimates
     voxel_estimates_table = [];
     voxel_estimates_table = table(ve_subjectID,ve_voxelID,...
         ve_frequency_nERB, ve_frequency_kHz,...
         ve_selectivity_nERB, ve_selectivity_kHz,...
-        ve_roi, ve_r2,...
-        ve_acquistion, ve_concatenation,...
-        ve_analysis, ve_hrf, ve_estimation,...
+        ve_roi, ve_r2, ve_r2ATrue,...
+        ve_hemisphere, ve_location,...
+        ve_acquistion, ve_comparision, ve_concatenation,...
+        ve_analysis, ve_estimation,...
         'VariableNames',{'subjectID','voxelID',...
         'frequency_nERB', 'frequency_kHz', ...
         'selectivity_nERB', 'selectivity_kHz',...
-        'roi','r2',...
-        'acquistion', 'concatenation',...
-        'analysis', 'hrf',...
+        'roi','r2','r2ATrue',...
+        'hemisphere', 'location',...
+        'acquistion', 'comparision', 'concatenation',...
+        'analysis',...
         'estimation'});
-    
-    writetable(voxel_estimates_table, 'Comparisions_voxel_estimates.csv')
+
+    writetable(voxel_estimates_table, 'sHL_voxel_estimates.csv')
     % Tuning curves
     tuning_curves_table = [];
     tuning_curves_table = table(tc_subjectID,...
         tc_beta_weight, tc_beta_weight_norm,...
         tc_beta_weight_ConATrue, tc_beta_weight_norm_ConATrue,...
-        tc_beta_bin,...
-        tc_beta_freq,...
+        tc_beta_bin_nERB,...
+        tc_beta_freq_nERB,...
+        tc_beta_bin_kHz,...
+        tc_beta_freq_kHz,...
         tc_beta_bin_id,...
         tc_beta_freq_id,...
         tc_roi,...
         tc_acquistion, tc_beta_averaging,...
-        tc_analysis, tc_hrf,...
+        tc_analysis,...
         'VariableNames',{'subjectID',...
         'beta_weight', 'beta_weight_normalised',...
         'beta_weight_A_True', 'beta_weight_A_True_normalised',...
-        'beta_bin', ...
-        'beta_freq',...
-        'beta_binID', ...
-        'beta_freqID',...
+        'beta_bin_NERB', ...
+        'beta_freq_NERB',...
+        'beta_bin_kHz', ...
+        'beta_freq_kHz',...
+        'beta_bin_ID', ...
+        'beta_freq_ID',...
         'roi',...
-        'acquistion', 'beta_averaging',...
-        'analysis', 'hrf'});
-    
-    
-    writetable(tuning_curves_table, 'Comparisions_tuning_curves.csv')
-    
+        'comparision', 'beta_averaging',...
+        'analysis'});
+
+
+    writetable(tuning_curves_table, 'sHL_tuning_curves.csv')
+
     % average beta weights
     av_beta_weights_table = [];
     av_beta_weights_table = table(bw_subjectID,...
-        bw_beta_weight, bw_beta_weight_norm,... 
-        bw_beta_freq, bw_beta_freq_id, bw_roi,...
+        bw_beta_weight, bw_beta_weight_norm,...
+        bw_beta_freq_nERB, bw_beta_freq_kHz, bw_beta_freq_id, bw_roi,...
         bw_acquistion, bw_beta_averaging,...
-        bw_analysis, bw_hrf,...
+        bw_analysis,...
         'VariableNames',{'subjectID',...
         'beta_weight', 'beta_weight_normalised',...
-        'beta_freq', '_beta_freqID',...
+        'beta_freq_NERB', 'beta_freq_kHz', 'beta_freq_ID',...
         'roi',...
-        'acquistion', 'beta_averaging',...
-        'analysis', 'hrf'});
-    
-    writetable(av_beta_weights_table, 'Comparisions_beta_weights.csv')
+        'comparision', 'beta_averaging',...
+        'analysis'});
+
+    writetable(av_beta_weights_table, 'sHL_beta_weights.csv')
 end
 
-% HRF
-if doHRF
+
+%% Study stuff to plot
+% could just add to the end of data as a different acquistion?
+if doStudyPlots
     
-    % subject loop would end here
-    % move out of subject loop to save all subjects
-    HRFparams_table = [];
-    HRFparams_table = table(hrfparams_name,hrfparams_params,...
-        hrfparams_subject,...
-        'VariableNames',{'HRFparams_name', 'HRFparams_params', 'HRFparams_subject'});
+    %% Get stimulus properties
+    % get stimulus frequencies
+    stimInfo.lowFreqkHz = 0.1;
+    stimInfo.highFreqkHz = 8;
+    stimInfo.nStim = 32;
+    
+    [stimInfo.stimFreqs, stimInfo.stimFreqs_bin, stimInfo.stimFreqs_mv, stimInfo.stimNERBs, stimInfo.stimNERBs_bin, stimInfo.stimNERBs_mv] = convertStimIDtoFrequency(stimInfo.lowFreqkHz,stimInfo.highFreqkHz,stimInfo.nStim);
+    
+    % stimInfo.stimNERBs
+    
+    % interp to scale linearly spaced in nERBs
+    lin_nERB = linspace(cal_nERB(0.05),cal_nERB(16),1000);
+    % db values
+    [dB_values_SL, dB_values_SPL] = calStimulusSensationLevel(cal_nERB2kHz(lin_nERB));
+    
+    % dB_values = interp1(frequencies_nERB,transfer_function.fft,lin_nERB,'spline');
+    % average dB values at stimulus frequencies
+    % get stimulus values - could be an input..
+    
+    for i = 1:length(stimInfo.stimNERBs)
+        [~, u_index] = min(abs(lin_nERB-(stimInfo.stimNERBs(i)+0.5)));
+        [~, l_index] = min(abs(lin_nERB-(stimInfo.stimNERBs(i)-0.5)));
         
-    writetable(HRFparams_table, 'HRFparams_est.csv')
+        av_dB_SPL(i) = mean(dB_values_SPL(l_index:u_index));        
+        av_dB_SL(i) = mean(dB_values_SL(l_index:u_index));
+    end
+
+    av_dB_SLnorm = av_dB_SL ./ max(av_dB_SL);
+      
+    noise_temp_level_SL = av_dB_SL;
+    noise_temp_level_SLnorm = av_dB_SLnorm; 
+    noise_temp_level_SPL = av_dB_SPL;
+    noise_temp_freq_kHz = stimInfo.stimFreqs;
+    noise_temp_freq_nERB = stimInfo.stimNERBs;
     
-    hrf_table = [];
-    hrf_table = table(hrf_SubjectID,hrf_Est,...
-        hrf_EstNorm,hrf_Time,...
-        'VariableNames',{'Subject', 'hrf_Est', 'hrf_EstNorm', 'hrf_Time'});    
+    % moving average
+    nBins = 8;
+    windowAvSize = size(noise_temp_freq_kHz,2)/nBins;
+    loopLength = size(noise_temp_freq_kHz,2) - windowAvSize + 1;
+    noise_temp_level_SL_mv = nan(size(noise_temp_freq_kHz,1),loopLength);
+    noise_temp_level_SLnorm_mv = nan(size(noise_temp_freq_kHz,1),loopLength);    
+    noise_temp_level_SPL_mv = nan(size(noise_temp_freq_kHz,1),loopLength);
     
-    writetable(hrf_table, 'HRF_est.csv')
-    
-    hrftw_table = [];
-    hrftw_table = table(hrftw_SubjectID, hrftw_Est, hrftw_EstNorm,...
-        hrftw_freq, hrftw_Time,...
-        'VariableNames',{'Subject', 'hrf_Est', 'hrf_EstNorm', 'hrf_freq', 'hrf_Time'});    
-    
-    writetable(hrftw_table, 'HRFTW_est.csv')
-            
-    % check param distribution
-    % take median - minise the effects of outliers
-    
-    hrfFunctions = {@get_HRFGamma;
-        @get_HRFDoubleGamma;
-        @get_HRFDiffOfGamma;};
-    t = 0:15;
-    for iHRF = 1:length(hrfNames)
+    for iBeta = 1:loopLength
+        noise_temp_level_SL_mv(iBeta) = round(mean(noise_temp_level_SL(iBeta:iBeta+windowAvSize-1)),3);
+        noise_temp_level_SLnorm_mv(iBeta) = round(mean(noise_temp_level_SLnorm(iBeta:iBeta+windowAvSize-1)),3);
+        noise_temp_level_SPL_mv(iBeta) = round(mean(noise_temp_level_SPL(iBeta:iBeta+windowAvSize-1)),3);
+        %         noise_temp_freq_kHz_mv(iBeta) = round(mean(noise_temp_freq_kHz(iBeta:iBeta+windowAvSize-1)),3);
         
-        % get data
-        hrf2av = [];
-        eval(['hrf2av = hrf.',  hrfNames{iHRF},'_data;']);
-        
-        % check by plotting functions
-        % average using median
-        figure
-        for iParam = 1:size(hrf2av,2)
-            subplot(3,3,iParam)
-            hist(hrf2av(:,iParam))
-            hrf_av(iParam) = median(hrf2av(:,iParam));
-        end
-        
-        eval(['hrf.',  hrfNames{iHRF},'_av = hrf_av;']);
-        
-        % check average functions
-        subplot(3,3,9)
-        plot(t,hrfFunctions{iHRF}(hrf_av,t))
-        disp(hrf_av)
+        noise_temp_freq_kHz_mv (iBeta) = round(mean(stimInfo.stimFreqs(iBeta:iBeta+windowAvSize-1)),3);
+        noise_temp_freq_nERB_mv(iBeta) = round(mean(stimInfo.stimNERBs(iBeta:iBeta+windowAvSize-1)),3);
     end
     
-    % save hrf
-    save('hrf.mat','hrf')
+    % bin stimulus
+    binSize = 4;
+    noise_temp_level_SL_bin = zeros(1,length(noise_temp_level_SL)/binSize);
+    noise_temp_level_SLnorm_bin = zeros(1,length(noise_temp_level_SLnorm)/binSize);
+    noise_temp_level_SPL_bin = zeros(1,length(noise_temp_level_SPL)/binSize);
     
-    hrfDoubleGamma = hrfFunctions{1}(hrf_av,t);
-    
-end
+    c = 1;
+    for i = 1:length(noise_temp_level_SL)/binSize
+        noise_temp_level_SL_bin(i) = mean(noise_temp_level_SL(c:c + (binSize-1)));
+        noise_temp_level_SLnorm_bin(i) = mean(noise_temp_level_SLnorm(c:c + (binSize-1)));
+        noise_temp_level_SPL_bin(i) = mean(noise_temp_level_SPL(c:c + (binSize-1)));
+        
+        noise_temp_freq_kHz_bin(i) = mean(stimInfo.stimFreqs(c:c + (binSize-1)));
+        noise_temp_freq_nERB_bin(i) = mean(stimInfo.stimNERBs(c:c + (binSize-1)));
+        
+        c = c + binSize;
+    end
 
-%% Cortical Magnification %%
-if doCorticalMagnification
+    noise_level_SL = [noise_temp_level_SL'; noise_temp_level_SL_bin'; noise_temp_level_SL_mv'];    
+    noise_level_SLnorm = [noise_temp_level_SLnorm'; noise_temp_level_SLnorm_bin'; noise_temp_level_SLnorm_mv'];    
+    noise_level_SPL = [noise_temp_level_SPL'; noise_temp_level_SPL_bin'; noise_temp_level_SPL_mv'];
     
-    T = table(cm_CorticalDistance,cm_Frequency_nERB,...
-        cm_r2, cm_TuningWidth,...
-        cm_Analysis,cm_ROI,...
-        cm_SubjectID,...
-        'VariableNames',{'CorticalDistance' 'Frequency' 'r2' 'TuningWidth' 'Analysis' 'ROI','SubjectID'});
+    noise_freq_kHz = [stimInfo.stimFreqs'; noise_temp_freq_kHz_bin'; noise_temp_freq_kHz_mv';];
+    noise_freq_nERB = [stimInfo.stimNERBs'; noise_temp_freq_nERB_bin'; noise_temp_freq_nERB_mv'];
     
-    writetable(T, 'CorticalMagnification.csv')
-    
-end
+    length_mv = length(noise_temp_level_SL_mv);
+    length_none = length(noise_temp_level_SL);
+    length_bin = length(noise_temp_level_SL_bin);
+    noise_averaging = [string(repmat('None',length_none,1)); string(repmat('Binned',length_bin,1)); string(repmat('Moving Average',length_mv,1))];
+   
+    noise_table = [];
+    noise_table = table(noise_freq_kHz, noise_freq_nERB, noise_level_SL, noise_level_SLnorm, noise_level_SPL, noise_averaging,...
+        'VariableNames',{'frequency_kHz', 'frequency_nERB', 'noise_SL', 'noise_SLnorm', 'noise_SPL', 'Averaging'});
 
+    writetable(noise_table, 'Sensation_Level.csv')
+end
 
 %% Fin.
 disp('Done!')

@@ -151,17 +151,28 @@ end
 % end
     
 pRFInfo.analysisNames_Groups{1}{1} = 'pRF';
+pRFInfo.analysisNames_Groups{2} = {'pRF', 'pRF_SL_level'};
 pRFInfo.stimulusWeighting{1} = {'None'};
-% pRFInfo.stimulusWeighting{2} = {'None','SL_level','BOLD','fit'};
+pRFInfo.stimulusWeighting{2} = {'None','SL_level'};
 
-pRFInfo.stimulusWeighting{2} = {'BOLD'};
-% pRFInfo.stimulusWeighting{2} = {'None','SL_level'};
-for iWeight = 1:length(pRFInfo.stimulusWeighting{2})
-    pRFInfo.analysisNames_Groups{2}{iWeight} = ['pRF_' pRFInfo.stimulusWeighting{2}{iWeight}];
-end
 
-pRFInfo.pRFrois = {'LeftACex','RightACex'}; % ROIs to restrict pRF analysis - expanded around AC
+% % pRFInfo.stimulusWeighting{2} = {'None','SL_level','BOLD','fit'};
+% 
+% % pRFInfo.stimulusWeighting{2} = {'BOLD'};
+% 
+% for iWeight = 1:length(pRFInfo.stimulusWeighting{2})
+%     pRFInfo.analysisNames_Groups{2}{iWeight} = ['pRF_' pRFInfo.stimulusWeighting{2}{iWeight}];
+% end
+
+% pRFInfo.pRFrois = {'LeftACex','RightACex'}; % ROIs to restrict pRF analysis - expanded around AC
+% pRFInfo.pRFOverlayNames = {'r2','PrefCentreFreq','rfHalfWidth'};
+
+pRFInfo.pRFrestrictROI = 'ARexp';
+% pRFInfo.pRFrois = {'Left_AR_exp','Right_AR_exp'}; % ROIs to restrict pRF analysis - expanded around AC
 pRFInfo.pRFOverlayNames = {'r2','PrefCentreFreq','rfHalfWidth'};
+pRFInfo.pRFgradientReversalOverlay = 2;
+pRFInfo.pRFrestrictROI = 'ARexp';
+pRFInfo.pRFanalysisName = ['pRF_', pRFInfo.pRFrestrictROI];
 
 %% Info - save general info needed to struct
 
@@ -186,10 +197,15 @@ Info.smooth = 1;
 % Info.ROInames = {'RightAC','RightPosAC','RightAntAC','LeftAC','LeftPosAC','LeftAntAC','AC'};
 
 % Must match order of sides
-Info.ROInames = {'LeftAC','RightAC'};
-Info.ROIbasenames = {'AC'};
-Info.LeftROInames = {'LeftAC'};
-Info.RightROInames = {'RightAC'};
+% Info.ROInames = {'LeftAC','RightAC'};
+% Info.ROIbasenames = {'AC'};
+% Info.LeftROInames = {'LeftAC'};
+% Info.RightROInames = {'RightAC'};
+Info.ROInames = {'LeftGR','RightGR'};
+Info.ROIbasenames = {'GR'};
+Info.LeftROInames = {'LeftGR_GLM','LeftGRa_GLM','LeftGRp_GLM'};
+Info.RightROInames = {'RightGR_GLM','RightGRa_GLM','RightGRp_GLM'};
+
 % Info.ROInames_flat = {'RightAC_flat','LeftAC_flat'};
 
 Info.epiDims = [128 128 24 73]; % dims of functional scans
