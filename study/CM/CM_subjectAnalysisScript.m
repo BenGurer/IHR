@@ -68,6 +68,7 @@ doGetAndRestrictDATA_pRF = 0;
 doGRrois = 0;
 doCorticalMagnification = 0;
 doPrintFigures = 1;
+doPrintFigureSpotlight = 1;
 
 %% define subjects
 % iSubs2Run = [1,2,3,4,5,6,7,8];
@@ -1415,7 +1416,11 @@ for iSub = 1:length(iSubs2Run)
     %% print figures
     if doPrintFigures
         
-        filetype = '.png';
+        % notes
+        % define spotlight on pRF pCF figures then print the rest - need logical save names
+        % save both jet and brewer maps
+        
+        filetype = 'png';
         thisView = viewSet(thisView,'showrois','hide');        
         thisView = viewSet(thisView,'basecorticaldepth', [0.3, 0.7]);
         thisView = viewSet(thisView,'alpha',1);
@@ -1438,8 +1443,57 @@ for iSub = 1:length(iSubs2Run)
         roiAnalName = {'GLM'};
         
         groupSaveNames = {'sparse','cont'};
+                
+        % get view
+        thisView = getMLRView;
         
+        % spotlight size
+        radius = 750;
+        
+        % get splotlight coords
+        data.printcoords = cell(1,2);
+        iGroup = 1;
+        iAnal = 2;
+        iOverlay = 2;
+        spotlighted = 0;
+                
+        if doPrintFigureSpotlight
+            if viewGet(thisView,'curgroup') ~= viewGet(thisView,'groupNum',glmInfo.groupNames{iGroup})
+                thisView = viewSet(thisView,'curgroup',glmInfo.groupNames{iGroup});
+            end
+            
+            % set to pRF analysis
+            analysisName = analysisNames{iAnal};
+            if viewGet(thisView,'curAnalysis') ~= viewGet(thisView,'analysisNum',analysisName)
+                thisView = viewSet(thisView,'curAnalysis',viewGet(thisView,'analysisNum',analysisName));
+            end
+            
+            % set to pCF overlay
+            overlayNames = pRFoverlayNames;
+            estimateNames = estimateNames_pRF;
+            overlayNum = viewGet(thisView,'overlayNum',overlayNames{iOverlay});
+            thisView = viewSet(thisView,'curOverlay',overlayNum);
+            
+            for iSide = 1:length(Info.Sides)
+                
+                if viewGet(thisView,'currentbase') ~= viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide}])
+                    baseNum = viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide}]);
+                    thisView = viewSet(thisView,'currentbase',baseNum);
+                end
+                %             saveName = ['Subject_' iSub '_' groupSaveNames{iGroup} '_' analysisSave_Names{iAnal} '_' estimateNames{iOverlay} '_' Info.sides{iSide}];
+                saveName = ['DefineSpotlight_' Info.sides{iSide}  '_Subject_' num2str(iSub)];
+                % refresh mrLoadRet view
+                refreshMLRDisplay(thisView.viewNum);
+                
+                [thisView,data.printcoords{iSide},radius] = print_parammap(thisView,[],radius,saveName,filetype,spotlighted);
+            end
+        end
+        
+        % print figures
         for iSide = 1:length(Info.Sides)
+            coords = data.printcoords{iSide}; % only want to do once per hemi
+            spotlighted = 1; % only want to do once per hemi
+            
             if viewGet(thisView,'currentbase') ~= viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide}])
                 baseNum = viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide}]);
                 thisView = viewSet(thisView,'currentbase',baseNum);
@@ -1455,7 +1509,7 @@ for iSub = 1:length(iSubs2Run)
                     
                     if viewGet(thisView,'curAnalysis') ~= viewGet(thisView,'analysisNum',analysisName)
                         thisView = viewSet(thisView,'curAnalysis',viewGet(thisView,'analysisNum',analysisName));
-                    end                    
+                    end
                     
                     switch analysisName
                         case 'glm_hrfDoubleGamma'
@@ -1469,10 +1523,14 @@ for iSub = 1:length(iSubs2Run)
                     for iOverlay = 1:length(overlayNames)
                         
                         overlayNum = viewGet(thisView,'overlayNum',overlayNames{iOverlay});
-                        thisView = viewSet(thisView,'curOverlay',overlayNum);                      
-                                                  
-                        % get view
-                        thisView = getMLRView;
+                        thisView = viewSet(thisView,'curOverlay',overlayNum);
+                        
+                        % refresh mrLoadRet view
+                        refreshMLRDisplay(thisView.viewNum);
+                        
+                        saveName = [groupSaveNames{iGroup} '_' analysisSave_Names{iAnal} '_' estimateNames{iOverlay} '_' Info.sides{iSide} '_Subject_' num2str(iSub)];
+                        
+                        [thisView,printcoords{iSide},radius] = print_parammap(thisView,coords,radius,saveName,filetype,spotlighted);
                         
                         % change overlay colour map
                         thisView = viewSet(thisView,'overlaycmap','convertOverlay_brewerColour'); % trying using brewer map here
@@ -1480,17 +1538,20 @@ for iSub = 1:length(iSubs2Run)
                         % refresh mrLoadRet view
                         refreshMLRDisplay(thisView.viewNum);
                         
-                        coords = []; % only want to do once per hemi
-                        radius = 750;
-                        saveName = ['Subject_' iSub '_' groupSaveNames{iGroup} '_' analysisSave_Names{iAnal} '_' estimateNames{iOverlay} '_' Info.sides{iSide}];                                       
-                        spotlighted = 1;
+                        saveName = [saveName '_brewer'];
                         
-                        [thisView,coords,radius] = print_paramsmap_spotlight(thisView,coords,radius,saveName,spotlighted);
+                        [thisView,printcoords{iSide},radius] = print_parammap(thisView,coords,radius,saveName,filetype,spotlighted);
+                        
+                        thisView = viewSet(thisView,'overlaycmap','jet'); % trying using brewer map here
+                         
+                        % refresh mrLoadRet view
+                        refreshMLRDisplay(thisView.viewNum);
                         
                     end
                 end
             end
         end
+        
         
         thisView = viewSet(thisView,'alpha',0);
         thisView = viewSet(thisView,'currentroi',viewGet(thisView,'roiNum','AR'));
@@ -1504,25 +1565,35 @@ for iSub = 1:length(iSubs2Run)
             
             % anatomy
             thisView = viewSet(thisView,'showrois','hide');
-            saveName = ['anat_', Info.sides{iSide}];
+            saveName = ['anat_', Info.sides{iSide} '_Subject_' num2str(iSub)];
             mrPrint(thisView,'useDefault=1','roiSmooth=0','roiLabels=0')
-            fh = findobj( 'Type', 'Figure', 'Name', 'Print figure' );
-            saveas(fh,saveName,'svg')
-            close(fh)
+            
+            refreshMLRDisplay(thisView.viewNum); % update view
+            [thisView,printcoords{iSide},radius] = print_parammap(thisView,coords,radius,saveName,filetype,spotlighted);
+            
             
             % AR roi
             thisView = viewSet(thisView,'showrois','selected perimeter');
-            saveName = ['roi_AR_', Info.sides{iSide}];
-            mrPrint(thisView,'useDefault=1','roiSmooth=0','roiLabels=0')
-            fh = findobj( 'Type', 'Figure', 'Name', 'Print figure' );
-            saveas(fh,saveName,filetype)
-            close(fh)
+            saveName = ['roi_AR_', Info.sides{iSide} '_Subject_' num2str(iSub)];
+            
+            refreshMLRDisplay(thisView.viewNum); % update view
+            [thisView,printcoords{iSide},radius] = print_parammap(thisView,coords,radius,saveName,filetype,spotlighted);
+            
             
         end
         
-        % GR rois      
+        % GR rois
         thisView = viewSet(thisView,'showrois','selected perimeter');
+        
         for iSide = 1:length(Info.Sides)
+            thisView = viewSet(thisView,'alpha',1);
+            if viewGet(thisView,'curgroup') ~= viewGet(thisView,'groupNum',[subjectInfo.flatmapNames{iSide}, 'Volume'])
+                thisView = viewSet(thisView,'curgroup',[subjectInfo.flatmapNames{iSide}, 'Volume']);
+            end
+            if viewGet(thisView,'curAnalysis') ~= viewGet(thisView,'analysisNum','combineTransformOverlays')
+                thisView = viewSet(thisView,'curAnalysis',viewGet(thisView,'analysisNum','combineTransformOverlays'));
+            end
+            %             thisView = viewSet(thisView,'alpha',0);
             if viewGet(thisView,'currentbase') ~= viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide},'Volume'])
                 baseNum = viewGet(thisView,'baseNum',[subjectInfo.flatmapNames{iSide},'Volume']);
                 thisView = viewSet(thisView,'currentbase',baseNum);
@@ -1530,35 +1601,66 @@ for iSub = 1:length(iSubs2Run)
             
             for iROI = 1:length(roiNames)
                 
-                saveName = ['roi_', roiNames{iROI}, Info.sides{iSide}];
+                overlayNum = viewGet(thisView,'overlayNum',['Ouput 4 - gradientReversal_' Info.sides{iSide} '_glm_hrfDoubleGamma(julien_pCF_nERB,[18 18 21])']);
+                thisView = viewSet(thisView,'curOverlay',overlayNum);
+                
+                thisView = viewSet(thisView,'alphaoverlay',['Ouput 6 - gradientReversal_' Info.sides{iSide} '_glm_hrfDoubleGamma(julien_pCF_nERB,[18 18 21])']);
+                thisView = viewSet(thisView,'alphaoverlayexponent',0.01);
+                
+                %                 thisView = viewSet(thisView,'alphaoverlay','averageDepthVol(ConcatenationSparse_glm_hrfDoubleGamma (FDR-adjusted P [F (fTest - all conditions)],0))');
+                
+                saveName = ['roi_', roiNames{iROI}, Info.sides{iSide} '_Subject_' num2str(iSub)];
                 
                 thisView = viewSet(thisView,'currentroi',viewGet(thisView,'roiNum',[Info.Sides{iSide},roiNames{iROI}, '_GLM']));
-                refreshMLRDisplay(thisView);
-                
-                mrPrint(thisView,'useDefault=1','roiSmooth=0','roiLabels=0')               
-                % set size to A4
-                fh = findobj( 'Type', 'Figure', 'Name', 'Print figure' );
-                
-                myaa('publish');  % Render an anti-aliased version
-                
-
                 
                 refreshMLRDisplay(thisView.viewNum); % update view
-
-%                 publish test.m;)
-                saveas(fh,saveName,filetype)
-                close(fh)
+                
+                [thisView,printcoords{iSide},radius] = print_parammap(thisView,coords,radius,saveName,filetype,spotlighted);
+                
+                % change overlay colour map
+                thisView = viewSet(thisView,'overlaycmap','convertOverlay_brewerColour'); % trying using brewer map here
+                
+                % refresh mrLoadRet view
+                refreshMLRDisplay(thisView.viewNum);
+                
+                saveName = [saveName '_brewer'];
+                
+                [thisView,printcoords{iSide},radius] = print_parammap(thisView,coords,radius,saveName,filetype,spotlighted);
+                
+                thisView = viewSet(thisView,'overlaycmap','jet'); % trying using brewer map here
+                
+                % refresh mrLoadRet view
+                refreshMLRDisplay(thisView.viewNum);
+                
+                if iROI == 1
+                    thisView = viewSet(thisView,'showrois','hide');
+                    % gradient reversal overlays
+                    saveName = ['GradientReversals_' Info.sides{iSide} '_Subject_' num2str(iSub)];
+                    
+                    [thisView,printcoords{iSide},radius] = print_parammap(thisView,coords,radius,saveName,filetype,spotlighted);
+                    
+                    % change overlay colour map
+                    thisView = viewSet(thisView,'overlaycmap','convertOverlay_brewerColour'); % trying using brewer map here
+                    
+                    % refresh mrLoadRet view
+                    refreshMLRDisplay(thisView.viewNum);
+                    
+                    saveName = [saveName '_brewer'];
+                    
+                    [thisView,printcoords{iSide},radius] = print_parammap(thisView,coords,radius,saveName,filetype,spotlighted);
+                    
+                    thisView = viewSet(thisView,'overlaycmap','jet'); % trying using brewer map here
+                    
+                    % refresh mrLoadRet view
+                    refreshMLRDisplay(thisView.viewNum);
+                    
+                    thisView = viewSet(thisView,'showrois','selected perimeter');
+                end
+                
             end
-            
-            % gradient reversal overlays 
-            % figure out how to alpha  pCF maps by gradient reversals
-            'Ouput 4 - gradientReversal_left_glm_hrfDoubleGamma(julien_pCF_nERB,[18 18 21])'
-            
-            thisView = viewSet(thisView,'alphaoverlay','Ouput 6 - gradientReversal_left_glm_hrfDoubleGamma(julien_pCF_nERB,[18 18 21])');
-            thisView = viewSet(thisView,'alphaoverlayexponent',0.01);
         end
         
-        thisView = viewSet(thisView,'alpha',1);
+%         thisView = viewSet(thisView,'alpha',1);
     end
     
     %% Quit current mrLoadRet view
